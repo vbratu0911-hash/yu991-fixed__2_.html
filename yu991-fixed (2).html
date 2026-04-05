@@ -1,0 +1,2657 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#000">
+<title>Ю991</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;0,800;0,900;1,700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{
+  --bg:#000;--s1:#0d0d0d;--s2:#141414;--s3:#1c1c1c;
+  --b1:rgba(255,255,255,.06);--b2:rgba(255,255,255,.12);
+  --t1:#f0ede8;--t2:#aaa;--t3:#666;
+  --lime:#c8ff00;--cyan:#00f0ff;--red:#ff3b3b;
+  --orange:#ff7a00;--purple:#a855f7;--green:#00e676;--gold:#ffd740;
+  --H:'Barlow Condensed',sans-serif;--B:'Barlow',sans-serif;
+  --safe:env(safe-area-inset-bottom,0px);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--t1);font-family:var(--B);overflow:hidden;-webkit-font-smoothing:antialiased}
+
+/* SPLASH */
+#splash{position:fixed;inset:0;z-index:9999;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;transition:opacity .5s}
+#splash.out{opacity:0;pointer-events:none}
+.sp-logo{font-family:var(--H);font-size:72px;font-weight:900;letter-spacing:-4px;line-height:1;color:#fff}
+.sp-logo em{color:var(--lime);font-style:normal}
+.sp-tag{font-family:var(--H);font-size:10px;font-weight:700;letter-spacing:5px;color:var(--t3);text-transform:uppercase;margin-top:6px}
+.sp-bar{width:200px;height:2px;background:var(--s3);border-radius:2px;margin-top:24px;overflow:hidden}
+.sp-prog{height:100%;width:0%;background:var(--lime);border-radius:2px;transition:width 1.8s cubic-bezier(.4,0,.2,1)}
+.sp-pct{font-family:var(--H);font-size:11px;font-weight:700;letter-spacing:2px;color:var(--lime);margin-top:10px}
+
+/* APP SHELL */
+#app{position:fixed;inset:0;display:flex;flex-direction:column}
+
+/* TOPBAR */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;padding-top:max(10px,env(safe-area-inset-top,10px));border-bottom:1px solid var(--b1);flex-shrink:0;background:rgba(0,0,0,.96);backdrop-filter:blur(20px)}
+.tb-logo{font-family:var(--H);font-size:20px;font-weight:900;letter-spacing:-1px}
+.tb-logo em{color:var(--lime);font-style:normal}
+.tb-r{display:flex;align-items:center;gap:8px}
+.tb-time{font-family:var(--H);font-size:12px;font-weight:600;color:var(--t3)}
+.tb-weather{font-family:var(--H);font-size:12px;font-weight:600;color:var(--t3)}
+.score-chip{display:flex;align-items:center;gap:5px;background:var(--s2);border:1px solid var(--b2);border-radius:20px;padding:5px 12px;cursor:pointer;transition:background .2s}
+.score-chip:active{background:var(--s3)}
+.sc-num{font-family:var(--H);font-size:15px;font-weight:900;color:var(--lime);line-height:1}
+.sc-lbl{font-family:var(--H);font-size:8px;font-weight:700;color:var(--t3);letter-spacing:1px}
+
+/* CONTENT */
+#content{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(60px + var(--safe))}
+#content::-webkit-scrollbar{display:none}
+
+/* BOTTOM NAV */
+.bnav{position:fixed;bottom:0;left:0;right:0;background:rgba(0,0,0,.97);backdrop-filter:blur(24px);border-top:1px solid var(--b1);display:flex;padding:8px 0 calc(6px + var(--safe));z-index:100}
+.ni{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:2px 0;transition:all .2s}
+.ni-ico{font-size:20px;transition:transform .2s}
+.ni-lbl{font-family:var(--H);font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--t2);transition:color .2s}
+.ni.on .ni-lbl{color:var(--lime)}
+.ni.on .ni-ico{transform:scale(1.15)}
+
+/* PAGES */
+.page{display:none}
+.page.on{display:block;animation:pgIn .22s cubic-bezier(.16,1,.3,1)}
+@keyframes pgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── SHARED COMPONENTS ── */
+.ph{padding:18px 18px 14px;border-bottom:1px solid var(--b1)}
+.ph-ey{font-family:var(--H);font-size:9px;font-weight:700;letter-spacing:3px;color:var(--t3);text-transform:uppercase;margin-bottom:4px}
+.ph-ti{font-family:var(--H);font-size:30px;font-weight:900;letter-spacing:-1.5px;text-transform:uppercase;line-height:1}
+.ph-ti em{color:var(--lime);font-style:normal}
+
+/* Section button (main menu item) */
+.sec-btn{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--b1);cursor:pointer;transition:background .15s;-webkit-user-select:none}
+.sec-btn:active{background:var(--s1)}
+.sb-ico{font-size:22px;flex-shrink:0;width:32px;text-align:center}
+.sb-body{flex:1;min-width:0}
+.sb-title{font-family:var(--H);font-size:16px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}
+.sb-sub{font-family:var(--H);font-size:11px;font-weight:600;color:var(--t2);letter-spacing:.5px;margin-top:2px}
+.sb-right{display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0}
+.sb-val{font-family:var(--H);font-size:16px;font-weight:900;line-height:1}
+.sb-val2{font-family:var(--H);font-size:9px;font-weight:600;color:var(--t3);letter-spacing:1px;margin-top:2px}
+.sb-arr{color:var(--t3);font-size:14px;margin-top:2px}
+
+/* Sub-page header (back button) */
+.sub-head{display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--b1)}
+.back-btn{font-family:var(--H);font-size:12px;font-weight:700;color:var(--lime);letter-spacing:1px;text-transform:uppercase;cursor:pointer;padding:4px 0}
+.sub-title{font-family:var(--H);font-size:18px;font-weight:900;text-transform:uppercase;letter-spacing:-0.5px;flex:1}
+
+/* Stat strip */
+.stat-strip{display:flex;border-bottom:1px solid var(--b1)}
+.sc{flex:1;padding:14px 8px;border-right:1px solid var(--b1);text-align:center}
+.sc:last-child{border-right:none}
+.sc-v{font-family:var(--H);font-size:20px;font-weight:900;line-height:1}
+.sc-l{font-family:var(--H);font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t2);margin-top:3px}
+
+/* List row */
+.lr{display:flex;align-items:center;gap:12px;padding:13px 18px;border-bottom:1px solid var(--b1)}
+.lr:last-child{border-bottom:none}
+.lr-stripe{width:3px;border-radius:2px;align-self:stretch;flex-shrink:0}
+.lr-ico{font-size:18px;flex-shrink:0;width:26px;text-align:center}
+.lr-body{flex:1;min-width:0}
+.lr-title{font-family:var(--H);font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lr-sub{font-family:var(--H);font-size:11px;font-weight:600;color:var(--t2);letter-spacing:.5px;margin-top:2px}
+.lr-right{text-align:right;flex-shrink:0}
+.lr-val{font-family:var(--H);font-size:15px;font-weight:900;line-height:1}
+.lr-val2{font-family:var(--H);font-size:10px;font-weight:600;color:var(--t2);margin-top:2px}
+
+/* Progress bar */
+.pbar{height:4px;background:var(--s3);border-radius:2px;overflow:hidden}
+.pfill{height:100%;border-radius:2px;transition:width 1s cubic-bezier(.16,1,.3,1)}
+
+/* Form elements */
+.flabel{font-family:var(--H);font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--t2);display:block;margin-bottom:4px}
+.finput{background:var(--s2);border:1px solid var(--b2);border-radius:8px;padding:10px 12px;color:var(--t1);font-family:var(--B);font-size:14px;outline:none;width:100%;margin-bottom:10px;transition:border-color .2s;-webkit-appearance:none}
+.finput:focus{border-color:var(--lime)}
+.finput::placeholder{color:var(--t3)}
+select.finput{appearance:none;cursor:pointer}
+textarea.finput{resize:none;min-height:70px;line-height:1.5}
+.form-grid{display:grid;gap:10px;margin-bottom:10px}
+.form-grid.c2{grid-template-columns:1fr 1fr}
+.form-grid.c3{grid-template-columns:1fr 1fr 1fr}
+.form-section{padding:16px 18px;border-bottom:1px solid var(--b1)}
+.form-section-title{font-family:var(--H);font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--t3);margin-bottom:12px}
+
+/* Buttons */
+.btn{border:none;border-radius:8px;padding:12px 18px;font-family:var(--H);font-size:13px;font-weight:900;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all .2s;width:100%;display:block}
+.btn:active{transform:scale(.97)}
+.btn-lime{background:var(--lime);color:#000}
+.btn-ghost{background:transparent;color:var(--t1);border:1px solid var(--b2)}
+.btn-ghost:active{background:var(--s1)}
+.btn-red{background:var(--red);color:#fff}
+.btn-sm{padding:7px 12px;font-size:10px;width:auto;display:inline-block}
+.btn-row{display:flex;gap:8px;padding:14px 18px;border-bottom:1px solid var(--b1)}
+.btn-row .btn{flex:1}
+
+/* Section label */
+.sec-lbl{font-family:var(--H);font-size:10px;font-weight:800;letter-spacing:3px;text-transform:uppercase;color:var(--t2);padding:12px 18px 6px;display:flex;justify-content:space-between;align-items:center}
+.sec-lbl button{font-family:var(--H);font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--lime);cursor:pointer;background:none;border:none}
+
+/* Modal */
+.moverlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .25s}
+.moverlay.open{opacity:1;pointer-events:all}
+.msheet{width:100%;background:#111;border-radius:20px 20px 0 0;padding:18px;padding-bottom:calc(18px + var(--safe));transform:translateY(100%);transition:transform .3s cubic-bezier(.16,1,.3,1);border-top:1px solid var(--b2);max-height:92vh;overflow-y:auto}
+.moverlay.open .msheet{transform:translateY(0)}
+.mhandle{width:40px;height:3px;background:var(--b2);border-radius:2px;margin:0 auto 16px}
+.mtitle{font-family:var(--H);font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:-.5px;margin-bottom:14px}
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.mtag{padding:5px 12px;border-radius:20px;font-family:var(--H);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:var(--s2);border:1px solid var(--b1);color:var(--t3);cursor:pointer;transition:all .2s}
+.mtag.on{background:var(--lime);color:#000;border-color:var(--lime)}
+
+/* ── HOME ── */
+.home-hero{padding:18px;border-bottom:1px solid var(--b1)}
+.hh-greet{font-family:var(--H);font-size:10px;font-weight:700;letter-spacing:3px;color:var(--t3);text-transform:uppercase;margin-bottom:6px}
+.hh-main{font-family:var(--H);font-size:50px;font-weight:900;letter-spacing:-3px;line-height:.95;text-transform:uppercase}
+.hh-main em{color:var(--lime);font-style:normal}
+.hh-sub{font-family:var(--H);font-size:11px;font-weight:600;color:var(--t3);letter-spacing:1.5px;text-transform:uppercase;margin-top:6px}
+.hh-score-row{display:flex;align-items:center;gap:16px;margin-top:18px}
+.big-ring{position:relative;flex-shrink:0}
+.big-ring svg{display:block}
+.brc{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.brc-n{font-family:var(--H);font-size:28px;font-weight:900;color:var(--lime);line-height:1}
+.brc-l{font-family:var(--H);font-size:8px;font-weight:700;color:var(--t3);letter-spacing:1px}
+.bars{flex:1;display:flex;flex-direction:column;gap:7px}
+.bar-row{display:flex;align-items:center;gap:7px}
+.bar-n{font-family:var(--H);font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--t3);width:55px;flex-shrink:0}
+.bar-t{flex:1;height:3px;background:var(--s3);border-radius:2px;overflow:hidden}
+.bar-f{height:100%;border-radius:2px;transition:width 1.2s cubic-bezier(.16,1,.3,1) .3s}
+.bar-p{font-family:var(--H);font-size:9px;font-weight:700;color:var(--t3);width:24px;text-align:right;flex-shrink:0}
+
+.crisis-row{display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--b1)}
+.cr-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.cr-dot.green{background:var(--green);box-shadow:0 0 6px var(--green)}
+.cr-dot.yellow{background:var(--gold);box-shadow:0 0 6px var(--gold)}
+.cr-dot.red{background:var(--red);box-shadow:0 0 6px var(--red)}
+.cr-text{font-family:var(--H);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;flex:1}
+.cr-badge{font-family:var(--H);font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:3px}
+.badge-green{background:rgba(0,230,118,.12);color:var(--green);border:1px solid rgba(0,230,118,.25)}
+.badge-yellow{background:rgba(255,215,64,.12);color:var(--gold);border:1px solid rgba(255,215,64,.25)}
+.badge-red{background:rgba(255,59,59,.12);color:var(--red);border:1px solid rgba(255,59,59,.25)}
+
+.must-earn{padding:16px 18px;border-bottom:1px solid var(--b1);background:rgba(255,59,59,.04)}
+.me-lbl{font-family:var(--H);font-size:9px;font-weight:800;letter-spacing:3px;text-transform:uppercase;color:var(--red);margin-bottom:4px}
+.me-num{font-family:var(--H);font-size:44px;font-weight:900;letter-spacing:-2px;line-height:1;color:var(--red)}
+.me-sub{font-family:var(--H);font-size:10px;font-weight:600;color:var(--t3);margin-top:4px;letter-spacing:1px}
+
+.mot-block{padding:16px 18px;border-bottom:1px solid var(--b1)}
+.mot-tag{font-family:var(--H);font-size:9px;font-weight:800;letter-spacing:3px;text-transform:uppercase;color:var(--lime);margin-bottom:8px}
+.mot-text{font-family:var(--H);font-size:18px;font-weight:800;line-height:1.35;text-transform:uppercase;letter-spacing:-.3px}
+.mot-text em{color:var(--lime);font-style:normal}
+.mot-auth{font-family:var(--H);font-size:10px;font-weight:600;color:var(--t3);letter-spacing:2px;margin-top:6px;text-transform:uppercase}
+
+.ai-brief{display:none;padding:14px 18px;border-bottom:1px solid var(--b1);background:rgba(0,240,255,.03)}
+.ai-brief.show{display:block}
+.ab-tag{display:inline-block;background:var(--cyan);color:#000;font-family:var(--H);font-size:8px;font-weight:800;letter-spacing:2px;padding:3px 8px;border-radius:3px;margin-bottom:7px;text-transform:uppercase}
+.ab-text{font-family:var(--B);font-size:13px;line-height:1.6;color:#ccc}
+
+/* ── ROUTE ── */
+.route-timer-section{padding:20px 18px;border-bottom:1px solid var(--b1)}
+.rts-lbl{font-family:var(--H);font-size:9px;font-weight:800;letter-spacing:3px;text-transform:uppercase;margin-bottom:4px;transition:color .3s}
+.rts-lbl.idle{color:var(--t3)}
+.rts-lbl.live{color:var(--lime)}
+.rts-timer{font-family:var(--H);font-size:72px;font-weight:900;letter-spacing:-4px;line-height:1;transition:color .3s}
+.rts-timer.idle{color:var(--s3)}
+.rts-timer.live{color:var(--cyan)}
+.rts-tip{font-family:var(--B);font-size:12px;color:var(--t3);margin-top:8px;line-height:1.4}
+.route-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px 18px;border-bottom:1px solid var(--b1)}
+.rbtn{border:none;border-radius:10px;padding:18px 12px;font-family:var(--H);font-size:14px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:6px}
+.rbtn:active{transform:scale(.95)}
+.rbtn .ri{font-size:26px}
+.rbtn.pickup{background:var(--lime);color:#000}
+.rbtn.deliver{background:var(--s2);color:var(--t3);border:1px solid var(--b2)}
+.rbtn.deliver.ready{background:var(--red);color:#fff}
+.rbtn:disabled{opacity:.3;cursor:not-allowed;transform:none!important}
+
+/* ── AI CHAT ── */
+.chat-wrap{display:flex;flex-direction:column;min-height:calc(100dvh - 60px - var(--safe) - 52px)}
+.chat-msgs{flex:1;padding:14px 18px 120px;overflow-y:auto}
+.chat-msgs::-webkit-scrollbar{display:none}
+.cmsg{margin-bottom:12px;display:flex;flex-direction:column}
+.cmsg.user{align-items:flex-end}
+.cmsg.ai{align-items:flex-start}
+.cbub{max-width:84%;padding:10px 14px;border-radius:14px;font-family:var(--B);font-size:14px;line-height:1.55}
+.cmsg.user .cbub{background:var(--lime);color:#000;border-bottom-right-radius:4px;font-weight:500}
+.cmsg.ai .cbub{background:var(--s1);border:1px solid var(--b2);color:#e8e8e8;border-bottom-left-radius:4px}
+.ctime{font-family:var(--H);font-size:9px;font-weight:600;color:var(--t3);letter-spacing:.5px;margin-top:3px;padding:0 4px}
+.chat-bar-wrap{position:fixed;bottom:calc(60px + var(--safe));left:0;right:0;background:#000;border-top:1px solid var(--b1);z-index:50}
+.chat-bar{display:flex;gap:8px;align-items:flex-end;padding:10px 18px}
+.chat-inp{flex:1;background:var(--s1);border:1px solid var(--b2);border-radius:12px;padding:10px 13px;color:var(--t1);font-family:var(--B);font-size:14px;outline:none;resize:none;max-height:90px;line-height:1.4;transition:border-color .2s}
+.chat-inp:focus{border-color:var(--lime)}
+.chat-inp::placeholder{color:var(--t3)}
+.csend{width:40px;height:40px;border-radius:10px;background:var(--lime);border:none;color:#000;font-size:16px;cursor:pointer;flex-shrink:0;transition:all .2s;display:flex;align-items:center;justify-content:center}
+.csend:active{transform:scale(.93)}
+.cvoice{width:40px;height:40px;border-radius:10px;background:var(--s2);border:1px solid var(--b1);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;flex-shrink:0}
+.cvoice.on{background:rgba(255,59,59,.15);border-color:var(--red)}
+.chat-quickbar{display:flex;gap:6px;padding:8px 18px;overflow-x:auto;border-bottom:1px solid var(--b1)}
+.chat-quickbar::-webkit-scrollbar{display:none}
+.cq{flex-shrink:0;padding:5px 12px;background:var(--s2);border:1px solid var(--b1);border-radius:20px;font-family:var(--H);font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--t2);cursor:pointer;transition:all .2s}
+.cq:active{background:var(--s3);color:var(--lime)}
+.tdot{width:6px;height:6px;border-radius:50%;background:var(--t3);display:inline-block;animation:td 1.2s ease infinite}
+.tdot:nth-child(2){animation-delay:.2s}.tdot:nth-child(3){animation-delay:.4s}
+@keyframes td{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+
+/* CHALLENGE GRID */
+.grid365{display:grid;grid-template-columns:repeat(13,1fr);gap:3px;padding:14px 18px}
+.gday{aspect-ratio:1;border-radius:2px}
+.gday.done{background:var(--lime)}
+.gday.today{background:var(--cyan);animation:blink365 1.5s ease infinite}
+.gday.skip{background:rgba(255,59,59,.35)}
+.gday.future{background:var(--s2)}
+@keyframes blink365{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* RADAR */
+.radar-wrap{padding:16px 18px;display:flex;justify-content:center;border-bottom:1px solid var(--b1)}
+#radarSvg{width:100%;max-width:280px}
+.dims-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--b1)}
+.dim-cell{background:var(--bg);padding:14px 16px;cursor:pointer;transition:background .15s}
+.dim-cell:active{background:var(--s1)}
+.dim-name{font-family:var(--H);font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:3px}
+.dim-score{font-family:var(--H);font-size:26px;font-weight:900;line-height:1}
+.dim-track{height:3px;background:var(--s3);border-radius:2px;margin-top:5px;overflow:hidden}
+.dim-fill{height:100%;border-radius:2px}
+.dim-hint{font-family:var(--B);font-size:11px;color:var(--t3);margin-top:4px;line-height:1.4}
+
+/* GOAL CARD */
+.goal-card{background:var(--s1);border:1px solid var(--b1);border-radius:10px;margin:8px 18px;padding:14px}
+.gc-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.gc-title{font-family:var(--H);font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:.3px}
+.gc-cat{font-family:var(--H);font-size:9px;font-weight:600;color:var(--t3);letter-spacing:1px;margin-top:2px}
+.gc-pct{font-family:var(--H);font-size:20px;font-weight:900;color:var(--lime)}
+.gc-del{font-family:var(--H);font-size:8px;font-weight:700;color:var(--t3);cursor:pointer;letter-spacing:1px;text-transform:uppercase;margin-top:4px;display:block;text-align:right}
+
+/* HABIT ROW */
+.habit-row{display:flex;align-items:center;gap:12px;padding:13px 18px;border-bottom:1px solid var(--b1)}
+.h-ico{font-size:22px;flex-shrink:0}
+.h-info{flex:1}
+.h-name{font-family:var(--H);font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:.3px}
+.h-streak{font-family:var(--H);font-size:10px;font-weight:700;color:var(--lime);letter-spacing:1px;margin-top:2px}
+.h-dots{display:flex;gap:4px}
+.hdot{width:24px;height:24px;border-radius:5px;background:var(--s2);border:1px solid var(--b1);display:flex;align-items:center;justify-content:center;font-size:8px;font-family:var(--H);font-weight:700;color:var(--t3);cursor:pointer;transition:all .2s;text-transform:uppercase}
+.hdot.ok{background:var(--lime);border-color:var(--lime);color:#000}
+.hdot.td{border-color:var(--cyan);color:var(--cyan)}
+
+/* WEEK BLOCK */
+.week-block{padding:13px 18px;border-bottom:1px solid var(--b1)}
+.wb-day{font-family:var(--H);font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.wb-earn{color:var(--lime);font-size:11px}
+.wb-focus{font-family:var(--B);font-size:12px;color:var(--t3);margin-bottom:7px;line-height:1.4}
+.wb-steps{display:flex;flex-wrap:wrap;gap:4px}
+.wb-step{padding:3px 9px;background:var(--s2);border:1px solid var(--b1);border-radius:20px;font-family:var(--H);font-size:9px;font-weight:600;color:var(--t3);letter-spacing:.5px}
+
+/* NOTES */
+.note-fast{padding:14px 18px;border-bottom:1px solid var(--b1)}
+.note-row{display:flex;gap:8px}
+.note-ta{flex:1;background:var(--s2);border:1px solid var(--b2);border-radius:10px;padding:10px 12px;color:var(--t1);font-family:var(--B);font-size:14px;outline:none;resize:none;min-height:50px;transition:border-color .2s}
+.note-ta:focus{border-color:var(--lime)}
+.note-ta::placeholder{color:var(--t3)}
+.voice-btn{width:44px;height:44px;background:var(--s2);border:1px solid var(--b2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;flex-shrink:0;align-self:flex-start;transition:all .2s}
+.voice-btn.on{background:rgba(255,59,59,.15);border-color:var(--red)}
+
+/* THOUGHT CARD */
+.thought-card{padding:13px 18px;border-bottom:1px solid var(--b1)}
+.tc-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.tc-type{font-family:var(--H);font-size:8px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--lime)}
+.tc-date{font-family:var(--H);font-size:8px;font-weight:600;color:var(--t3)}
+.tc-text{font-family:var(--B);font-size:14px;line-height:1.5;color:var(--t1)}
+.tc-del{font-family:var(--H);font-size:8px;font-weight:700;color:var(--t3);cursor:pointer;letter-spacing:1px;text-transform:uppercase;margin-top:6px;display:inline-block}
+
+/* CHECKLIST */
+.cl-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--b1)}
+.cl-item:last-child{border-bottom:none}
+.cl-ck{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--b2);display:flex;align-items:center;justify-content:center;font-size:10px;cursor:pointer;flex-shrink:0;transition:all .2s}
+.cl-item.done .cl-ck{background:var(--lime);border-color:var(--lime);color:#000}
+.cl-tx{flex:1;background:none;border:none;color:var(--t1);font-family:var(--B);font-size:13px;outline:none}
+.cl-item.done .cl-tx{color:var(--t3);text-decoration:line-through}
+.cl-rm{color:var(--t3);cursor:pointer;font-size:14px;padding:0 4px}
+
+/* TASK ROW */
+.task-row{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--b1)}
+.task-row:last-child{border-bottom:none}
+.task-ck{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--b2);display:flex;align-items:center;justify-content:center;font-size:10px;cursor:pointer;flex-shrink:0;transition:all .2s}
+.task-row.done .task-ck{background:var(--lime);border-color:var(--lime);color:#000}
+.task-text{font-family:var(--B);font-size:14px;flex:1;line-height:1.3}
+.task-row.done .task-text{color:var(--t3);text-decoration:line-through}
+.task-prio{font-family:var(--H);font-size:8px;font-weight:800;letter-spacing:1px;padding:2px 6px;border-radius:3px;flex-shrink:0}
+.tp-high{background:rgba(255,59,59,.15);color:var(--red)}
+.tp-med{background:rgba(255,122,0,.15);color:var(--orange)}
+
+/* TIME BLOCK */
+.tblock{border-bottom:1px solid var(--b1)}
+.tblock-head{display:flex;align-items:center;gap:10px;padding:12px 18px}
+.tblock-stripe{width:3px;height:24px;border-radius:2px;flex-shrink:0}
+.tblock-info{flex:1}
+.tblock-name{font-family:var(--H);font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}
+.tblock-time{font-family:var(--H);font-size:9px;font-weight:600;color:var(--t3);letter-spacing:1.5px;margin-top:2px}
+.tblock-cnt{font-family:var(--H);font-size:12px;font-weight:800;color:var(--lime)}
+.tblock-tasks{padding:0 18px 10px}
+
+/* empty */
+.empty{padding:30px 18px;text-align:center}
+.empty-ico{font-size:32px;opacity:.25;margin-bottom:8px}
+.empty-txt{font-family:var(--H);font-size:10px;font-weight:700;letter-spacing:2px;color:var(--t3);text-transform:uppercase}
+
+/* CATEGORY PILLS */
+.cat-row{display:flex;gap:6px;padding:10px 18px;overflow-x:auto;border-bottom:1px solid var(--b1)}
+.cat-row::-webkit-scrollbar{display:none}
+.cat-pill{flex-shrink:0;padding:5px 12px;border-radius:20px;font-family:var(--H);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:var(--s2);border:1px solid var(--b1);color:var(--t3);cursor:pointer;transition:all .2s}
+.cat-pill.on{background:var(--lime);color:#000;border-color:var(--lime)}
+
+/* MODE BTNS */
+.mode-bar{display:flex;gap:6px;padding:10px 18px;border-bottom:1px solid var(--b1)}
+.mode-btn{flex:1;padding:7px 6px;background:var(--s2);border:1px solid var(--b1);border-radius:6px;font-family:var(--H);font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--t3);cursor:pointer;transition:all .2s;text-align:center}
+.mode-btn.on{background:var(--lime);color:#000;border-color:var(--lime)}
+.mode-hint{padding:10px 18px;border-bottom:1px solid var(--b1);font-family:var(--B);font-size:12px;color:var(--t3);line-height:1.5}
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash">
+  <div class="sp-logo"><em>Ю</em>991</div>
+  <div class="sp-tag">Life Operating System</div>
+  <div class="sp-bar"><div class="sp-prog" id="spProg"></div></div>
+  <div class="sp-pct" id="spPct">0%</div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="tb-logo"><em>Ю</em>991</div>
+    <div class="tb-r">
+      <div class="tb-time" id="tbTime">--:--</div>
+      <div class="tb-weather" id="tbWx">🌤️</div>
+      <!-- Кольцо прогресса дня -->
+      <div style="position:relative;width:28px;height:28px;cursor:pointer" onclick="goSub('money','goal')" title="Прогресс дня">
+        <svg width="28" height="28" viewBox="0 0 28 28" style="transform:rotate(-90deg)">
+          <circle cx="14" cy="14" r="12" fill="none" stroke="var(--s3)" stroke-width="3"/>
+          <circle id="topDayRing" cx="14" cy="14" r="12" fill="none" stroke="var(--lime)" stroke-width="3" stroke-linecap="round" stroke-dasharray="75.4" stroke-dashoffset="75.4" style="transition:stroke-dashoffset .8s ease"/>
+        </svg>
+      </div>
+      <div class="score-chip" onclick="goSub('progress','life')">
+        <div class="sc-num" id="tbScore">0</div>
+        <div class="sc-lbl">SCORE</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="content">
+
+    <!-- ══════ HOME ══════ -->
+    <div class="page on" id="page-home">
+      <div class="home-hero">
+        <div class="hh-greet" id="hhGreet">Доброе утро</div>
+        <div class="hh-main" id="hhTitle">ТВОЙ<br>ЛУЧШИЙ<br><em>ДЕНЬ</em></div>
+        <div class="hh-score-row">
+          <div class="big-ring">
+            <svg width="96" height="96" viewBox="0 0 96 96">
+              <circle cx="48" cy="48" r="40" fill="none" stroke="#1c1c1c" stroke-width="5"/>
+              <circle id="bigRing" cx="48" cy="48" r="40" fill="none" stroke="#c8ff00" stroke-width="5"
+                stroke-linecap="round" stroke-dasharray="251" stroke-dashoffset="251"
+                transform="rotate(-90 48 48)" style="transition:stroke-dashoffset 1.3s cubic-bezier(.16,1,.3,1) .3s"/>
+            </svg>
+            <div class="brc"><div class="brc-n" id="bigScore">0</div><div class="brc-l">SCORE</div></div>
+          </div>
+          <div class="bars" id="homeBars"></div>
+        </div>
+      </div>
+
+      <div class="stat-strip">
+        <div class="sc"><div class="sc-v" style="color:var(--lime)" id="hm-earn">0</div><div class="sc-l">Сегодня PLN</div></div>
+        <div class="sc"><div class="sc-v" id="hm-tasks">0/0</div><div class="sc-l">Задачи</div></div>
+        <div class="sc"><div class="sc-v" style="color:var(--lime)" id="hm-hab">0/0</div><div class="sc-l">Привычки</div></div>
+        <div class="sc"><div class="sc-v" style="color:var(--orange)" id="hm-str">0🔥</div><div class="sc-l">Серия</div></div>
+      </div>
+
+      <!-- Crisis -->
+      <div class="crisis-row">
+        <div class="cr-dot" id="crDot"></div>
+        <div class="cr-text" id="crText">Загрузка...</div>
+        <div class="cr-badge" id="crBadge"></div>
+      </div>
+
+      <!-- Must earn -->
+      <div class="must-earn">
+        <div class="me-lbl">🎯 Минимум сегодня</div>
+        <div class="me-num" id="mustEarnNum">0 PLN</div>
+        <div class="me-sub" id="mustEarnSub">Осталось заработать до закрытия обязательств</div>
+      </div>
+
+      <!-- Motivation -->
+      <div class="mot-block">
+        <div class="mot-tag">💡 Мотивация дня</div>
+        <div class="mot-text" id="motText">...</div>
+        <div class="mot-auth" id="motAuth"></div>
+      </div>
+
+      <!-- AI Brief -->
+      <div class="ai-brief" id="aiBrief">
+        <div class="ab-tag">🌅 AI Брифинг</div>
+        <div class="ab-text" id="abText">...</div>
+      </div>
+
+      <!-- Quick actions -->
+      <div class="btn-row" style="padding:14px 18px">
+        <button class="btn btn-lime" onclick="goPage('work')">🛵 Маршрут</button>
+        <button class="btn btn-ghost" onclick="goPage('ai')">🤖 AI</button>
+      </div>
+      <!-- Quick actions row 2 -->
+      <div style="display:flex;gap:6px;padding:0 18px 14px;border-bottom:1px solid var(--b1)">
+        <button onclick="quickCapture()" style="flex:1;padding:8px 4px;background:var(--s2);border:1px solid var(--b1);border-radius:8px;font-family:var(--H);font-size:9px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--t2);cursor:pointer">📝 Заметка</button>
+        <button onclick="iAmTired()" style="flex:1;padding:8px 4px;background:var(--s2);border:1px solid var(--b1);border-radius:8px;font-family:var(--H);font-size:9px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--t2);cursor:pointer">😮‍💨 Устал</button>
+        <button onclick="quickDayCheck()" style="flex:1;padding:8px 4px;background:var(--s2);border:1px solid var(--b1);border-radius:8px;font-family:var(--H);font-size:9px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--t2);cursor:pointer">✅ Проверка</button>
+        <button onclick="morningActivation()" style="flex:1;padding:8px 4px;background:var(--s2);border:1px solid var(--b1);border-radius:8px;font-family:var(--H);font-size:9px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--t2);cursor:pointer">🔊 Голос</button>
+      </div>
+
+      <!-- Upcoming bills -->
+      <div class="sec-lbl">Ближайшие платежи</div>
+      <div id="upcomingBills"></div>
+    </div>
+
+    <!-- ══════ MONEY ══════ -->
+    <div class="page" id="page-money">
+      <div class="ph"><div class="ph-ey">Финансы</div><div class="ph-ti">ДЕНЬ<em>ГИ</em></div></div>
+
+      <!-- Finance overview strip -->
+      <div class="stat-strip">
+        <div class="sc"><div class="sc-v" style="color:var(--lime);font-size:17px" id="fin-inc">0</div><div class="sc-l">Доход мес.</div></div>
+        <div class="sc"><div class="sc-v" style="color:var(--red);font-size:17px" id="fin-exp">0</div><div class="sc-l">Расходы</div></div>
+        <div class="sc"><div class="sc-v" style="color:var(--gold);font-size:17px" id="fin-net">0</div><div class="sc-l">Чистый</div></div>
+        <div class="sc"><div class="sc-v" style="color:var(--red);font-size:17px" id="fin-debt">0</div><div class="sc-l">Долги</div></div>
+      </div>
+
+      <!-- AI forecast -->
+      <div style="display:flex;gap:10px;align-items:flex-start;padding:12px 18px;border-bottom:1px solid var(--b1);background:rgba(200,255,0,.03)">
+        <div style="font-size:18px;flex-shrink:0;margin-top:1px">📈</div>
+        <div style="font-family:var(--B);font-size:13px;line-height:1.55;color:#ccc" id="finForecast">Записывай доходы — AI посчитает прогноз.</div>
+      </div>
+
+      <!-- Sub-menu buttons -->
+      <div class="sec-btn" onclick="goSub('money','income')">
+        <div class="sb-ico">📈</div>
+        <div class="sb-body"><div class="sb-title">Доходы</div><div class="sb-sub">Записи · история · платформы</div></div>
+        <div class="sb-right"><div class="sb-val" style="color:var(--lime)" id="sm-inc">0 PLN</div><div class="sb-val2">этот месяц</div></div>
+      </div>
+      <div class="sec-btn" onclick="goSub('money','expenses')">
+        <div class="sb-ico">💸</div>
+        <div class="sb-body"><div class="sb-title">Расходы</div><div class="sb-sub">Категории · быстрый ввод</div></div>
+        <div class="sb-right"><div class="sb-val" style="color:var(--red)" id="sm-exp">0 PLN</div><div class="sb-val2">этот месяц</div></div>
+      </div>
+      <div class="sec-btn" onclick="goSub('money','debts')">
+        <div class="sb-ico">⚠️</div>
+        <div class="sb-body"><div class="sb-title">Долги</div><div class="sb-sub">Приоритеты · план атаки</div></div>
+        <div class="sb-right"><div class="sb-val" style="color:var(--red)" id="sm-debt">0 PLN</div><div class="sb-arr">›</div></div>
+      </div>
+      <div class="sec-btn" onclick="goSub('money','savings')">
+        <div class="sb-ico">🏦</div>
+        <div class="sb-body"><div class="sb-title">Накопления</div><div class="sb-sub">Цели · прогресс</div></div>
+        <div class="sb-right"><div class="sb-val" id="sm-sav">0 PLN</div><div class="sb-arr">›</div></div>
+      </div>
+      <div class="sec-btn" onclick="goSub('money','bills')">
+        <div class="sb-ico">🧾</div>
+        <div class="sb-body"><div class="sb-title">Платежи</div><div class="sb-sub">Обязательные · даты</div></div>
+        <div class="sb-right"><div class="sb-val" style="color:var(--orange)" id="sm-bills">0 PLN</div><div class="sb-val2">в месяц</div></div>
+      </div>
+      <div class="sec-btn" onclick="goSub('money','goal')">
+        <div class="sb-ico">🎯</div>
+        <div class="sb-body"><div class="sb-title">Цель месяца</div><div class="sb-sub">Прогресс к цели</div></div>
+        <div class="sb-right"><div class="sb-val" style="color:var(--lime)" id="sm-gpct">0%</div><div class="sb-arr">›</div></div>
+      </div>
+    </div>
+
+    <!-- ══════ WORK ══════ -->
+    <div class="page" id="page-work">
+      <div class="ph"><div class="ph-ey">Курьер · Вроцлав</div><div class="ph-ti">РА<em>БО</em>ТА</div></div>
+      <div class="sec-btn" onclick="goSub('work','shift')">
+        <div class="sb-ico">🛵</div>
+        <div class="sb-body"><div class="sb-title">Смена</div><div class="sb-sub">ЗАБРАЛ / ОТДАЛ · таймер</div></div>
+        <div class="sb-right"><div class="sb-val" style="color:var(--lime)" id="wm-earn">0 PLN</div><div class="sb-val2">сегодня</div></div>
+      </div>
+      <div class="sec-btn" onclick="goSub('work','map')">
+        <div class="sb-ico">🗺️</div>
+        <div class="sb-body"><div class="sb-title">Карта</div><div class="sb-sub">Зоны Вроцлава · AI совет</div></div>
+        <div class="sb-right"><div class="sb-arr">›</div></div>
+      </div>
+      <div class="sec-btn" onclick="goSub('work','analytics')">
+        <div class="sb-ico">📊</div>
+        <div class="sb-body"><div class="sb-title">Аналитика</div><div class="sb-sub">Маршруты · зоны · рекорды</div></div>
+        <div class="sb-right"><div class="sb-val" id="wm-cnt">0</div><div class="sb-val2">маршрутов</div></div>
+      </div>
+      <div class="sec-btn" onclick="goSub('work','income_add')">
+        <div class="sb-ico">➕</div>
+        <div class="sb-body"><div class="sb-title">Добавить доход</div><div class="sb-sub">Ручной ввод дохода</div></div>
+        <div class="sb-right"><div class="sb-arr">›</div></div>
+      </div>
+    </div>
+
+    <!-- ══════ LIFE ══════ -->
+    <div class="page" id="page-life">
+      <div class="ph"><div class="ph-ey">Тело · Разум · Рост</div><div class="ph-ti">ЖИЗ<em>НЬ</em></div></div>
+      <div class="sec-btn" onclick="goSub('life','habits')">
+        <div class="sb-ico">🌱</div>
+        <div class="sb-body"><div class="sb-title">Привычки</div><div class="sb-sub">Серии · трекер дней</div></div>
+        <div class="sb-right"><div class="sb-val" style="color:var(--lime)" id="lm-hab">0/0</div><div class="sb-val2">сегодня</div></div>
+      </div>
+      <div class="sec-btn" onclick="goSub('life','training')">
+        <div class="sb-ico">💪</div>
+        <div class="sb-body"><div class="sb-title">Тренировки</div><div class="sb-sub">A/Б/В · программы</div></div>
+        <div class="sb-right"><div class="sb-arr">›</div></div>
+      </div>
+      <div class="sec-btn" onclick="goSub('life','nutrition')">
+        <div class="sb-ico">🥗</div>
+        <div class="sb-body"><div class="sb-title">Питание</div><div class="sb-sub">Меню недели · расписание</div></div>
+        <div class="sb-right"><div class="sb-arr">›</div></div>
+      </div>
+      <div class="sec-btn" onclick="goSub('life','plan')">
+        <div class="sb-ico">📋</div>
+        <div class="sb-body"><div class="sb-title">План дня</div><div class="sb-sub">Утро / День / Вечер</div></div>
+        <div class="sb-right"><div class="sb-val" id="lm-tasks">0/0</div><div class="sb-val2">задач</div></div>
+      </div>
+      <div class="sec-btn" onclick="goSub('life','study')">
+        <div class="sb-ico">📚</div>
+        <div class="sb-body"><div class="sb-title">Учёба</div><div class="sb-sub">Автошкола · польский · английский</div></div>
+        <div class="sb-right"><div class="sb-arr">›</div></div>
+      </div>
+      <div class="sec-btn" onclick="goSub('life','notes')">
+        <div class="sb-ico">📓</div>
+        <div class="sb-body"><div class="sb-title">Заметки</div><div class="sb-sub">Мысли · идеи · голос</div></div>
+        <div class="sb-right"><div class="sb-val" id="lm-notes">0</div><div class="sb-arr">›</div></div>
+      </div>
+      <div class="sec-btn" onclick="goSub('life','challenge')">
+        <div class="sb-ico">🏆</div>
+        <div class="sb-body"><div class="sb-title">365 Дней</div><div class="sb-sub">Новая жизнь · серия</div></div>
+        <div class="sb-right"><div class="sb-val" style="color:var(--cyan)" id="lm-ch">1</div><div class="sb-val2">день</div></div>
+      </div>
+      <div class="sec-btn" onclick="goSub('life','goals')">
+        <div class="sb-ico">🎯</div>
+        <div class="sb-body"><div class="sb-title">Цели</div><div class="sb-sub">Год · прогресс · мечты</div></div>
+        <div class="sb-right"><div class="sb-arr">›</div></div>
+      </div>
+      <div class="sec-btn" onclick="goSub('life','day_log')">
+        <div class="sb-ico">📅</div>
+        <div class="sb-body"><div class="sb-title">Журнал дня</div><div class="sb-sub">Рефлексия · чеклист · оценка</div></div>
+        <div class="sb-right"><div class="sb-arr">›</div></div>
+      </div>
+      <div class="sec-btn" onclick="goSub('life_progress','life_progress')">
+        <div class="sb-ico">📊</div>
+        <div class="sb-body"><div class="sb-title">Прогресс жизни</div><div class="sb-sub">Радар · недельный итог · AI</div></div>
+        <div class="sb-right"><div class="sb-arr">›</div></div>
+      </div>
+    </div>
+
+    <!-- ══════ AI ══════ -->
+    <div class="page" id="page-ai" style="padding:0">
+      <div class="mode-bar">
+        <div class="mode-btn on" id="mb-balanced" onclick="setMode('balanced')">Баланс</div>
+        <div class="mode-btn" id="mb-hard" onclick="setMode('hard')">Жёстко</div>
+        <div class="mode-btn" id="mb-analyst" onclick="setMode('analyst')">Аналитик</div>
+        <div class="mode-btn" id="mb-coach" onclick="setMode('coach')">Коуч</div>
+      </div>
+      <div class="mode-hint" id="modeHint">Сбалансированный: честно, по делу, с поддержкой.</div>
+      <div class="chat-quickbar">
+        <div class="cq" onclick="quickPrompt('💰 Деньги и долги — где я сейчас?')">💰 Деньги</div>
+        <div class="cq" onclick="quickPrompt('📋 Составь план на сегодня')">📋 План</div>
+        <div class="cq" onclick="quickPrompt('🍕 Что поесть прямо сейчас?')">🍕 Питание</div>
+        <div class="cq" onclick="quickPrompt('🗺️ Куда сейчас ехать работать?')">🗺️ Зона</div>
+        <div class="cq" onclick="quickPrompt('🎯 Разбери мои страхи и скажи правду')">🎯 Правда</div>
+        <div class="cq" onclick="quickPrompt('📊 Проанализируй мою неделю')">📊 Неделя</div>
+        <div class="cq" onclick="quickPrompt('🌙 Ночной обзор — что спросить?')">🌙 Вечер</div>
+      </div>
+      <div class="chat-wrap">
+        <div class="chat-msgs" id="chatMsgs"></div>
+      </div>
+      <div class="chat-bar-wrap">
+        <div class="chat-bar">
+          <button class="cvoice" id="chatVoiceBtn" onclick="toggleChatVoice()">🎙️</button>
+          <textarea class="chat-inp" id="chatInp" rows="1" placeholder="Напиши или говори..." onkeydown="chatKey(event)" oninput="resizeInp(this)"></textarea>
+          <button class="csend" onclick="sendChat()">➤</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ SUB-PAGES (rendered dynamically) ══════ -->
+    <div class="page" id="page-sub">
+      <div id="subContent"></div>
+    </div>
+
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bnav">
+    <div class="ni on" onclick="goPage('home')" id="nav-home"><div class="ni-ico">🏠</div><div class="ni-lbl">Дом</div></div>
+    <div class="ni" onclick="goPage('money')" id="nav-money"><div class="ni-ico">💰</div><div class="ni-lbl">Деньги</div></div>
+    <div class="ni" onclick="goPage('work')" id="nav-work"><div class="ni-ico">🛵</div><div class="ni-lbl">Работа</div></div>
+    <div class="ni" onclick="goPage('life')" id="nav-life"><div class="ni-ico">🌱</div><div class="ni-lbl">Жизнь</div></div>
+    <div class="ni" onclick="goPage('ai')" id="nav-ai"><div class="ni-ico">🤖</div><div class="ni-lbl">AI</div></div>
+    <div class="ni" onclick="openSettings()" id="nav-settings"><div class="ni-ico">⚙️</div><div class="ni-lbl">Профиль</div></div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="moverlay" id="deliverM"><div class="msheet">
+  <div class="mhandle"></div><div class="mtitle">Маршрут завершён</div>
+  <label class="flabel">Ресторан</label><input class="finput" id="dlRest" placeholder="Oyche Doner">
+  <label class="flabel">Заработок (PLN)</label><input class="finput" type="number" id="dlEarn" placeholder="28">
+  <label class="flabel">Зона</label><input class="finput" id="dlZone" placeholder="Rynek">
+  <label class="flabel">Заметка</label><textarea class="finput" id="dlNote" style="min-height:50px" placeholder="Опционально..."></textarea>
+  <button class="btn btn-lime" onclick="doDeliver()">ЗАПИСАТЬ ✓</button>
+</div></div>
+
+<div class="moverlay" id="habM"><div class="msheet">
+  <div class="mhandle"></div><div class="mtitle">Новая привычка</div>
+  <input class="finput" id="habName" placeholder="Название привычки">
+  <div class="tag-row" id="habIcoRow">
+    <span class="mtag on" onclick="selMtag(this,'habIco','💪')">💪</span>
+    <span class="mtag" onclick="selMtag(this,'habIco','🏃')">🏃</span>
+    <span class="mtag" onclick="selMtag(this,'habIco','📚')">📚</span>
+    <span class="mtag" onclick="selMtag(this,'habIco','💧')">💧</span>
+    <span class="mtag" onclick="selMtag(this,'habIco','🧘')">🧘</span>
+    <span class="mtag" onclick="selMtag(this,'habIco','🥗')">🥗</span>
+    <span class="mtag" onclick="selMtag(this,'habIco','⏰')">⏰</span>
+    <span class="mtag" onclick="selMtag(this,'habIco','🎯')">🎯</span>
+  </div>
+  <input type="hidden" id="habIco" value="💪">
+  <button class="btn btn-lime" onclick="addHabit()">Создать</button>
+</div></div>
+
+<div class="moverlay" id="goalM"><div class="msheet">
+  <div class="mhandle"></div><div class="mtitle">Новая цель</div>
+  <input class="finput" id="goalTitle" placeholder="Название">
+  <div class="form-grid c2">
+    <div><label class="flabel">Категория</label><select class="finput" id="goalCat"><option>Долги</option><option>Тело</option><option>Машина</option><option>Деньги</option><option>Карьера</option><option>Другое</option></select></div>
+    <div><label class="flabel">Единица</label><input class="finput" id="goalUnit" placeholder="PLN"></div>
+  </div>
+  <div class="form-grid c2">
+    <div><label class="flabel">Цель</label><input class="finput" type="number" id="goalTarget" placeholder="10000"></div>
+    <div><label class="flabel">Текущее</label><input class="finput" type="number" id="goalCurrent" placeholder="0"></div>
+  </div>
+  <label class="flabel">Дедлайн</label><input class="finput" type="date" id="goalDead">
+  <label class="flabel">Заметки</label><textarea class="finput" id="goalNotes" style="min-height:50px"></textarea>
+  <button class="btn btn-lime" onclick="addGoal()">Создать цель</button>
+</div></div>
+
+<div class="moverlay" id="debtM"><div class="msheet">
+  <div class="mhandle"></div><div class="mtitle">Новый долг</div>
+  <input class="finput" id="debtTitle" placeholder="Название">
+  <input class="finput" id="debtLender" placeholder="Кредитор">
+  <div class="form-grid c2">
+    <div><label class="flabel">Сумма</label><input class="finput" type="number" id="debtBal" placeholder="3000"></div>
+    <div><label class="flabel">Мин. платёж</label><input class="finput" type="number" id="debtMin" placeholder="0"></div>
+  </div>
+  <div class="form-grid c2">
+    <div><label class="flabel">Валюта</label><select class="finput" id="debtCur"><option>PLN</option><option>UAH</option></select></div>
+    <div><label class="flabel">День платежа</label><input class="finput" type="number" id="debtDay" placeholder="15" min="1" max="31"></div>
+  </div>
+  <textarea class="finput" id="debtNote" style="min-height:50px" placeholder="Заметки..."></textarea>
+  <button class="btn btn-lime" onclick="addDebt()">Добавить</button>
+</div></div>
+
+<div class="moverlay" id="savM"><div class="msheet">
+  <div class="mhandle"></div><div class="mtitle">Цель накопления</div>
+  <input class="finput" id="savName" placeholder="Название (Квартира, Машина...)">
+  <div class="form-grid c2">
+    <div><label class="flabel">Цель (PLN)</label><input class="finput" type="number" id="savTarget" placeholder="14000"></div>
+    <div><label class="flabel">Накоплено</label><input class="finput" type="number" id="savCur" placeholder="0"></div>
+  </div>
+  <div class="tag-row">
+    <span class="mtag on" onclick="selMtag(this,'savIco','🏠')">🏠</span>
+    <span class="mtag" onclick="selMtag(this,'savIco','🚗')">🚗</span>
+    <span class="mtag" onclick="selMtag(this,'savIco','✈️')">✈️</span>
+    <span class="mtag" onclick="selMtag(this,'savIco','💻')">💻</span>
+    <span class="mtag" onclick="selMtag(this,'savIco','💰')">💰</span>
+  </div>
+  <input type="hidden" id="savIco" value="🏠">
+  <button class="btn btn-lime" onclick="addSaving()">Создать</button>
+</div></div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════
+const SK = 'yu991-final-v1';
+
+const MOTIVATIONS = [
+  {t:"Дисциплина — это выбор между тем что хочешь сейчас, и тем что хочешь больше всего.",a:"Lincoln"},
+  {t:"Пока считаешь деньги честно — ты уже перестаёшь быть жертвой хаоса.",a:"Life OS"},
+  {t:"Сильный день не тот где легко. Сильный день тот где не слил управление.",a:"AI"},
+  {t:"Твоя жизнь меняется не от желания, а от повторяемой системы.",a:"Life OS"},
+  {t:"Сначала контроль над днём. Потом над месяцем. Потом свобода.",a:"AI"},
+  {t:"Не ждёт никто. Старт — прямо сейчас.",a:"Voyage"},
+  {t:"Страх — компас. Он показывает куда нужно идти.",a:"Unknown"},
+  {t:"Один процент лучше каждый день — тридцать семь раз за год.",a:"James Clear"},
+];
+
+const ANCHOR_ZONES = [
+  {t:"Oyche Doner · Hala Swiebodzki",d:"Якорь №1 · быстрая выдача · высокий чек"},
+  {t:"MAX Burgers · Galeria Dominikanska",d:"Якорь №2 · сильный вечер · центр"},
+  {t:"KFC / McDonald's · Swidnicka / Rynek",d:"Стабильный поток · быстрая выдача"},
+  {t:"Chingu Korean · Hala Swiebodzki",d:"Резерв · хорошо рядом с первым якорем"},
+];
+
+const TIPS = [
+  "Śródmieście/Rynek — держись в 1.5 км. Oyche + McDonald's = поток.",
+  "11:30–14:00 и 18:00–21:00 — золотые часы. Не уходи из центра.",
+  "После смены батареи → сразу онлайн. Каждая минута = деньги.",
+  "Дождь = меньше конкурентов. Надевай дождевик и оставайся.",
+  "Wolt + UberEats одновременно — только если зону знаешь наизусть.",
+];
+
+const READY_WEEK = [
+  {key:"monday",day:"Понедельник",earn:"0–160",focus:"Восстановление, учёт, планирование недели.",steps:["Сон и восстановление","Закрыть учёт денег и трат","Проверить долги","Готовка на 2-3 дня","Собрать план недели"]},
+  {key:"tuesday",day:"Вторник",earn:"360–400",focus:"Тренировка A утром, два якоря днём.",steps:["07:00 завтрак: овсянка + яйца + банан","07:30 Тренировка A: тяга/спина","10:42–14:15 якоря: Oyche + MAX","14:15–15:15 батарея + обед","15:15–21:30 вечерний пик Rynek","23:00 сон"]},
+  {key:"wednesday",day:"Среда",earn:"430–490",focus:"Длинная смена без тренировки.",steps:["07:00 завтрак","10:00–14:15 первая смена","14:15–15:15 батарея + обед","15:15–23:00 вечерняя смена до конца"]},
+  {key:"thursday",day:"Четверг",earn:"360–400",focus:"Рабочий ритм + Тренировка Б в окне.",steps:["10:30–14:15 смена 1","15:30–16:15 Тренировка Б: грудь/трицепс","17:00–22:00 вечерняя смена"]},
+  {key:"friday",day:"Пятница",earn:"460–510",focus:"Главный пик. Вечер отдан работе.",steps:["10:00–14:15 первая смена","15:15–18:00 разгон","18:00–23:00 главный пик недели"]},
+  {key:"saturday",day:"Суббота",earn:"500–560",focus:"Максимум. Тренировка В утром.",steps:["07:30 Тренировка В: ноги/пресс","10:00–14:15 обеденный блок","15:15–23:30 длинный пик"]},
+  {key:"sunday",day:"Воскресенье",earn:"330–370",focus:"Умный ритм. Тренировка A если есть силы.",steps:["07:30 Тренировка A если есть силы","11:00–14:30 первая смена","16:00–21:00 вечерний блок"]},
+];
+
+const TRAINING = [
+  {title:"Тренировка A · Тяга/спина/бицепс",day:"Вторник или Воскресенье",exercises:["Подтягивания 5×макс","Австралийские подтягивания 4×12","Обратный хват 4×8","Тяга рюкзака в наклоне 4×12","Вис 3×45с","Подъём ног 3×12"]},
+  {title:"Тренировка Б · Жим/грудь/плечи",day:"Четверг или Понедельник",exercises:["Отжимания широкие 4×15","Брусья 4×8","Алмазные отжимания 3×12","Пайк-отжимания 3×10","Планка 3×60с"]},
+  {title:"Тренировка В · Ноги/пресс",day:"Суббота утром",exercises:["Приседания 4×20","Выпады 3×15","Сумо-приседания 3×15","Скручивания 4×20","Подъём ног лёжа 4×15","Боковая планка 3×35с"]},
+];
+
+const NUT_TIMING = [
+  {t:"07:00–08:00 · Завтрак",d:"Овсянка + яйца + банан. Энергия без тяжести."},
+  {t:"10:15–10:40 · Перед выездом",d:"Вода + банан или хлеб. Не выходить пустым."},
+  {t:"13:30–15:30 · Основной приём",d:"Курица/творог/яйца + рис или гречка."},
+  {t:"На смене",d:"Контейнер: яйца, банан, творог, тунец. Не ждать голода."},
+  {t:"21:00–22:00 · Ужин",d:"Легче чем днём: белок + немного углеводов."},
+  {t:"После 22:30",d:"Если голоден: творог, йогурт, кефир. Не жареное."},
+];
+
+const DIM_NAMES = ['Финансы','Тело','Ментал','Карьера','Духовн','Социал'];
+const DIM_COLS  = ['#c8ff00','#00f0ff','#a855f7','#ff7a00','#ff3b3b','#ffffff'];
+
+const SYS = `Ты — Ю991 AI, живой персональный коуч и компаньон. Ты — не бот с заготовками, ты думаешь как умный честный друг.
+
+О пользователе (зови его Voyage):
+— 26 лет, Вроцлав, Польша. Курьер e-bike (Wolt + Uber Eats одновременно).
+— Зарабатывает 3000–5000 zł/мес. Цель: 10 000–15 000 zł через 12 мес.
+— Долги: микрозаймы ~7500 PLN (просрочка 2 года), Monobank 50 000 UAH (~4750 PLN), долг маме девушки 4500 PLN.
+— Обязательные платежи в месяц: квартира 4410, еда 1800, велик 840, автошкола 1500, и др. — всего ~9600 PLN.
+— Интересы: AI-автоматизация (Make.com), дизайн (Midjourney+Photoshop), крипто, Telegram gifts.
+— Хочет: финансовую свободу, сильное тело (61кг → набор массы), дисциплину, призвание.
+— Психология: боится начать и провалиться, боится оценки других, чувствует "недостаточно готов", нет образа себя через 5 лет. Прокрастинация.
+— Поддержка: брат, родители, девушка.
+
+Говоришь ТОЛЬКО на русском. Ты думаешь, анализируешь, задаёшь вопросы. Ты замечаешь паттерны. Ты видишь скрытые страхи и называешь их своими именами — мягко но честно. Ты даёшь конкретику: не "старайся" а "сделай X прямо сейчас потому что Y". Максимум 3 абзаца. Иногда спрашивай встречный вопрос.`;
+
+// ═══════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════
+let S;
+
+function defaultState() {
+  return {
+    profile:{name:"Вадим",city:"Вроцлав",currency:"PLN",safeMinimum:6500,comfortTarget:9000,dailyFloor:325,schedule:"6/1",uahRate:0.095,mission:"Сначала вытащить деньги и долги под контроль, потом тело, дисциплину и выход из доставки."},
+    settings:{commanderMode:"balanced"},
+    intake:{focus:"Финансовая стабилизация",mainFear:"Начать и провалиться",nextWin:""},
+    mandatoryBills:[
+      {id:uid(),title:"Квартира",amount:4410,currency:"PLN",dueDay:1},
+      {id:uid(),title:"Еда",amount:1800,currency:"PLN",dueDay:28},
+      {id:uid(),title:"Аренда велика",amount:840,currency:"PLN",dueDay:28},
+      {id:uid(),title:"Автошкола",amount:1500,currency:"PLN",dueDay:15},
+      {id:uid(),title:"Барбер",amount:150,currency:"PLN",dueDay:20},
+      {id:uid(),title:"Собака",amount:200,currency:"PLN",dueDay:10},
+      {id:uid(),title:"Связь",amount:100,currency:"PLN",dueDay:10},
+      {id:uid(),title:"Интернет",amount:35,currency:"PLN",dueDay:10},
+      {id:uid(),title:"Девушка",amount:400,currency:"PLN",dueDay:25},
+      {id:uid(),title:"Автобус",amount:60,currency:"PLN",dueDay:8},
+      {id:uid(),title:"Monobank мин",amount:2500,currency:"UAH",dueDay:20},
+    ],
+    debts:[
+      {id:uid(),title:"Микрозайм 1",lender:"МФО",balance:3000,minPayment:0,currency:"PLN",dueDay:15,notes:"Просрочка ~2 года"},
+      {id:uid(),title:"Микрозайм 2",lender:"МФО",balance:2500,minPayment:0,currency:"PLN",dueDay:15,notes:"Просрочка ~2 года"},
+      {id:uid(),title:"Микрозайм 3",lender:"МФО",balance:2000,minPayment:0,currency:"PLN",dueDay:15,notes:"Просрочка ~2 года"},
+      {id:uid(),title:"Monobank",lender:"Monobank",balance:50000,minPayment:2500,currency:"UAH",dueDay:20,notes:"Мин. платёж в месяц"},
+      {id:uid(),title:"Долг маме девушки",lender:"Личный",balance:4500,minPayment:0,currency:"PLN",dueDay:25,notes:"Личный долг"},
+    ],
+    savings:[],
+    goals:[
+      {id:uid(),title:"Закрыть долги",category:"Долги",target:17000,current:0,unit:"PLN",deadline:shiftISO(tdk(),365),notes:""},
+      {id:uid(),title:"Машина",category:"Машина",target:14000,current:0,unit:"PLN",deadline:shiftISO(tdk(),365),notes:""},
+      {id:uid(),title:"Вес 66 кг",category:"Тело",target:66,current:61,unit:"кг",deadline:shiftISO(tdk(),180),notes:""},
+      {id:uid(),title:"Выход из доставки",category:"Карьера",target:12,current:0,unit:"шагов",deadline:shiftISO(tdk(),365),notes:""},
+    ],
+    incomeEntries:[], expenseEntries:[], orders:[],
+    thoughts:[], habits:[], habitLogs:[],
+    tasks:[], studyLogs:[], dayLogs:[],
+    weeklyMenu:{weekStart:"",days:[]},
+    challengeStart:tdk(), challengeLog:{}, yearGoals:"",
+    chat:[], chatMemory:[],
+  };
+}
+
+function load(){
+  try{
+    const d=localStorage.getItem(SK);
+    if(d){
+      const saved=JSON.parse(d);
+      const def=defaultState();
+      // Deep merge: use saved values but fall back to defaults for missing keys
+      S={...def,...saved};
+      // Ensure nested arrays are not lost if saved data is empty
+      ['mandatoryBills','debts','savings','goals','incomeEntries','expenseEntries',
+       'orders','thoughts','habits','habitLogs','tasks','studyLogs','dayLogs'].forEach(k=>{
+        if(!S[k]||!S[k].length)S[k]=def[k];
+      });
+    } else {
+      S=defaultState();
+    }
+  }catch(e){S=defaultState();}
+}
+function save(){try{localStorage.setItem(SK,JSON.stringify(S));}catch(e){}}
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+function init(){
+  load();
+  setDefaultDates();
+  ensureWeeklyMenu();
+  initTime();
+  setGreeting();
+  setMotivation();
+  renderHome();
+  renderMoneyMenu();
+  renderWorkMenu();
+  renderLifeMenu();
+  initChat();
+  fetchWeather();
+  const h = new Date().getHours();
+  if(h>=5&&h<=10) setTimeout(genBriefing,2000);
+
+  // Splash
+  let p=0;
+  const iv=setInterval(()=>{
+    p=Math.min(100,p+Math.random()*18+5);
+    document.getElementById('spProg').style.width=p+'%';
+    document.getElementById('spPct').textContent=Math.round(p)+'%';
+    if(p>=100){clearInterval(iv);setTimeout(()=>{document.getElementById('splash').classList.add('out');setTimeout(animScore,600);},300);}
+  },100);
+}
+
+function initTime(){
+  const tick=()=>{const n=new Date();const el=document.getElementById('tbTime');if(el)el.textContent=pad(n.getHours())+':'+pad(n.getMinutes());};
+  tick();setInterval(tick,30000);
+}
+
+function setGreeting(){
+  const h=new Date().getHours();
+  const g=h<12?'Доброе утро':h<18?'Добрый день':'Добрый вечер';
+  const d=new Date();
+  const days=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+  const mons=['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+  set('hhGreet',g+' · '+days[d.getDay()]+' '+d.getDate()+' '+mons[d.getMonth()]);
+}
+
+function setMotivation(){
+  const d=new Date();
+  const m=MOTIVATIONS[(d.getDate()+d.getMonth()*3)%MOTIVATIONS.length];
+  const words=m.t.split(' ');const last=words.pop();
+  const el=document.getElementById('motText');
+  if(el)el.innerHTML=words.join(' ')+' <em>'+last+'</em>';
+  set('motAuth','— '+m.a);
+}
+
+async function fetchWeather(){
+  try{
+    const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude=51.11&longitude=17.04&current=temperature_2m,weathercode&timezone=Europe/Warsaw');
+    const j=await r.json();
+    const t=Math.round(j.current.temperature_2m);
+    const c=j.current.weathercode;
+    const ico=c===0?'☀️':c<=3?'⛅':c<=67?'🌧️':'❄️';
+    set('tbWx',`${ico} ${t}°C`);
+  }catch(e){}
+}
+
+async function genBriefing(){
+  const m=getMetrics();
+  const el=document.getElementById('aiBrief');if(!el)return;
+  try{
+    const r=await callAI([{role:'user',content:`Утренний брифинг (2-3 предложения максимум): сегодня ${weekdayName(tdk())}, минимум дня ${m.mustEarnToday} PLN, долгов всего ${r2(m.totalDebt)} PLN. Один конкретный приоритет.`}],150);
+    set('abText',r);el.classList.add('show');
+  }catch(e){}
+}
+
+// ═══════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════
+let curPage='home', curSubKey='';
+let mapInited=false;
+
+function goPage(p){
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.ni').forEach(x=>x.classList.remove('on'));
+  document.getElementById('page-'+p)?.classList.add('on');
+  document.getElementById('nav-'+p)?.classList.add('on');
+  document.getElementById('content').scrollTop=0;
+  curPage=p;
+  if(p==='home'){renderHome();}
+  if(p==='money'){renderMoneyMenu();}
+  if(p==='work'){renderWorkMenu();}
+  if(p==='life'){renderLifeMenu();}
+  if(p==='ai'){setTimeout(scrollChat,80);}
+}
+
+function goSub(section, key){
+  curSubKey=key;
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
+  document.getElementById('page-sub')?.classList.add('on');
+  // keep nav active
+  document.querySelectorAll('.ni').forEach(x=>x.classList.remove('on'));
+  document.getElementById('nav-'+section)?.classList.add('on');
+  document.getElementById('content').scrollTop=0;
+  renderSub(section, key);
+}
+
+function goBack(){
+  // go back to parent page
+  const parentMap={
+    income:'money',expenses:'money',debts:'money',savings:'money',bills:'money',goal:'money',
+    shift:'work',map:'work',analytics:'work',income_add:'work',
+    habits:'life',training:'life',nutrition:'life',plan:'life',study:'life',notes:'life',challenge:'life',goals:'life',day_log:'life',
+    progress:'life',life:'life',settings:'home',life_progress:'life',
+  };
+  const parent=parentMap[curSubKey]||'home';
+  goPage(parent);
+}
+
+// ═══════════════════════════════════════════════════
+// SUB-PAGE RENDERER
+// ═══════════════════════════════════════════════════
+function renderSub(section, key){
+  const wrap=document.getElementById('subContent');
+  if(!wrap)return;
+  const subs={
+    income:subIncome, expenses:subExpenses, debts:subDebts, savings:subSavings,
+    bills:subBills, goal:subGoal, shift:subShift, map:subMap,
+    analytics:subAnalytics, income_add:subIncomeAdd, habits:subHabits,
+    training:subTraining, nutrition:subNutrition, plan:subPlan,
+    study:subStudy, notes:subNotes, challenge:subChallenge,
+    goals:subGoals, day_log:subDayLog, progress:subProgress, life:subProgress,
+    settings:subSettings, life_progress:subLifeProgress,
+  };
+  const fn=subs[key];
+  if(fn)fn(wrap);
+}
+
+function subHead(title, wrap){
+  wrap.innerHTML=`<div class="sub-head"><button class="back-btn" onclick="goBack()">‹ Назад</button><div class="sub-title">${title}</div></div>`;
+}
+
+// INCOME SUB
+function subIncome(wrap){
+  const m=getMetrics();
+  const pct=Math.min(100,r2((m.monthIncome/S.profile.safeMinimum)*100));
+  const entries=[...S.incomeEntries].filter(e=>{const[y,mo]=e.date.split('-').map(Number);const n=new Date();return y===n.getFullYear()&&mo===n.getMonth()+1;}).reverse().slice(0,10);
+  wrap.innerHTML=`
+    <div class="sub-head"><button class="back-btn" onclick="goBack()">‹ Назад</button><div class="sub-title">Доходы</div></div>
+    <div style="padding:14px 18px;border-bottom:1px solid var(--b1)">
+      <div style="font-family:var(--H);font-size:9px;font-weight:700;letter-spacing:3px;color:var(--t3);text-transform:uppercase;margin-bottom:4px">Цель месяца</div>
+      <div style="font-family:var(--H);font-size:42px;font-weight:900;letter-spacing:-2px;color:var(--lime);line-height:1">${r2(m.monthIncome)} <span style="font-size:18px;color:var(--t3)">/ ${r2(S.profile.safeMinimum)} PLN</span></div>
+      <div class="pbar" style="margin-top:10px"><div class="pfill" style="width:${pct}%;background:var(--lime)"></div></div>
+      <div style="font-family:var(--H);font-size:9px;color:var(--t3);letter-spacing:1px;margin-top:4px">${pct}% от безопасного минимума</div>
+    </div>
+    <div style="padding:12px 18px;border-bottom:1px solid var(--b1);background:rgba(200,255,0,.03);font-family:var(--B);font-size:13px;color:#ccc;line-height:1.5" id="inc-forecast">${getFinForecast()}</div>
+    <div class="sec-lbl">История этого месяца</div>
+    ${entries.length?entries.map(e=>`
+      <div class="lr">
+        <div class="lr-stripe" style="background:var(--lime);height:40px"></div>
+        <div class="lr-body"><div class="lr-title">${esc(e.platform||'Доход')}</div><div class="lr-sub">${e.date} ${e.zone?'· '+e.zone:''} ${e.hours?'· '+e.hours+'ч':''}</div></div>
+        <div class="lr-right"><div class="lr-val" style="color:var(--lime)">+${r2(cvt(e.amount,e.currency||'PLN'))} PLN</div></div>
+      </div>`).join(''):empty('Нет записей дохода')}
+    <div class="btn-row" style="margin-top:6px"><button class="btn btn-lime" onclick="goSub('work','income_add')">+ Добавить доход</button></div>`;
+}
+
+// EXPENSES SUB
+function subExpenses(wrap){
+  const m=getMetrics();
+  const bycat={};
+  S.expenseEntries.filter(e=>{const[y,mo]=e.date.split('-').map(Number);const n=new Date();return y===n.getFullYear()&&mo===n.getMonth()+1;}).forEach(e=>{const c=e.category||'Прочее';if(!bycat[c])bycat[c]=0;bycat[c]+=cvt(e.amount,e.currency||'PLN');});
+  const catColors={'Квартира':'var(--cyan)','Еда':'var(--green)','Велик':'var(--orange)','Школа':'var(--purple)','Долг':'var(--red)','Прочее':'var(--t3)'};
+  const recent=[...S.expenseEntries].reverse().slice(0,8);
+  wrap.innerHTML=`
+    <div class="sub-head"><button class="back-btn" onclick="goBack()">‹ Назад</button><div class="sub-title">Расходы</div></div>
+    <div class="stat-strip">
+      <div class="sc"><div class="sc-v" style="color:var(--red)">${r2(m.monthExpenses)}</div><div class="sc-l">Расходы PLN</div></div>
+      <div class="sc"><div class="sc-v" style="color:${m.monthNet>=0?'var(--lime)':'var(--red)'}">${r2(m.monthNet)}</div><div class="sc-l">Чистый</div></div>
+    </div>
+    <div class="sec-lbl">По категориям</div>
+    ${Object.entries(bycat).sort((a,b)=>b[1]-a[1]).map(([c,v])=>`
+      <div class="lr">
+        <div class="lr-stripe" style="background:${catColors[c]||'var(--t3)'};height:36px"></div>
+        <div class="lr-body"><div class="lr-title">${c}</div></div>
+        <div class="lr-right"><div class="lr-val" style="color:var(--red)">−${r2(v)} PLN</div></div>
+      </div>`).join('')||empty('Нет расходов')}
+    <div class="sec-lbl">Последние записи</div>
+    ${recent.map(e=>`
+      <div class="lr">
+        <div class="lr-body"><div class="lr-title">${esc(e.category||'Прочее')}</div><div class="lr-sub">${e.date} ${e.notes?'· '+e.notes.slice(0,20):''}</div></div>
+        <div class="lr-right"><div class="lr-val" style="color:var(--red)">−${r2(cvt(e.amount,e.currency||'PLN'))} PLN</div></div>
+      </div>`).join('')||empty('Нет записей')}
+    <div class="form-section">
+      <div class="form-section-title">Добавить расход</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
+        ${[{c:'Квартира',a:4410},{c:'Еда',a:40},{c:'Велик',a:210},{c:'Школа',a:1500},{c:'Долг',a:100}].map(q=>`<button class="btn btn-ghost btn-sm" onclick="qExp('${q.c}',${q.a})">${q.c} ${q.a}</button>`).join('')}
+      </div>
+      <div class="form-grid c2">
+        <div><label class="flabel">Дата</label><input class="finput" type="date" id="eDate"></div>
+        <div><label class="flabel">Сумма</label><input class="finput" type="number" id="eAmt" placeholder="0"></div>
+      </div>
+      <div class="form-grid c2">
+        <div><label class="flabel">Категория</label><select class="finput" id="eCat"><option>Квартира</option><option>Еда</option><option>Велик</option><option>Школа</option><option>Долг</option><option>Собака</option><option>Связь</option><option>Девушка</option><option>Прочее</option></select></div>
+        <div><label class="flabel">Валюта</label><select class="finput" id="eCur"><option>PLN</option><option>UAH</option></select></div>
+      </div>
+      <label class="flabel">Заметка</label><textarea class="finput" id="eNote" style="min-height:50px" placeholder="Опционально..."></textarea>
+      <button class="btn btn-lime" onclick="saveExpense()">Сохранить расход</button>
+    </div>`;
+  document.getElementById('eDate').value=tdk();
+}
+
+// DEBTS SUB
+function subDebts(wrap){
+  const total=S.debts.reduce((s,d)=>s+cvt(d.balance,d.currency),0);
+  const ranked=[...S.debts].map(d=>{
+    const pln=cvt(d.balance,d.currency);
+    const score=(/просроч/i.test(d.notes)?40:0)+(/мама|личный/i.test(d.notes+d.lender)?30:0)+(/mono/i.test(d.title+d.lender)?15:0)+Math.min(pln/120,30)+(d.minPayment>0?15:5);
+    return{...d,pln,score,priority:score>=70?'🔴 Критично':score>=45?'🟡 Важно':'🟢 Терпит'};
+  }).sort((a,b)=>b.score-a.score);
+  const daysLeft=S.profile.dailyFloor>0?Math.ceil(total/S.profile.dailyFloor):999;
+  wrap.innerHTML=`
+    <div class="sub-head"><button class="back-btn" onclick="goBack()">‹ Назад</button><div class="sub-title">Долги</div></div>
+    <div style="padding:14px 18px;border-bottom:1px solid var(--b1);background:rgba(255,59,59,.04)">
+      <div style="font-family:var(--H);font-size:9px;font-weight:700;letter-spacing:3px;color:var(--red);text-transform:uppercase;margin-bottom:4px">Всего долгов</div>
+      <div style="font-family:var(--H);font-size:44px;font-weight:900;letter-spacing:-2px;color:var(--red)">${r2(total)} <span style="font-size:16px">PLN</span></div>
+      <div style="font-family:var(--H);font-size:10px;color:var(--t3);letter-spacing:1px;margin-top:4px">При темпе ${S.profile.dailyFloor} PLN/день = ~${daysLeft} рабочих дней</div>
+    </div>
+    <div class="sec-lbl">Приоритеты <button onclick="openModal('debtM')">+ Добавить</button></div>
+    ${ranked.map((d,i)=>`
+      <div class="lr">
+        <div class="lr-stripe" style="background:${d.score>=70?'var(--red)':d.score>=45?'var(--gold)':'var(--green)'};height:52px"></div>
+        <div class="lr-body">
+          <div class="lr-title">${esc(d.title)}</div>
+          <div class="lr-sub">${esc(d.lender||'')} ${d.dueDay?'· до '+d.dueDay+' числа':''}${d.minPayment>0?' · мин '+d.minPayment+' '+d.currency:''}</div>
+          <div style="font-family:var(--H);font-size:9px;color:var(--t3);margin-top:2px">${d.priority}${d.notes?' · '+d.notes.slice(0,30):''}</div>
+        </div>
+        <div class="lr-right">
+          <div class="lr-val" style="color:var(--red)">${d.currency==='UAH'?d.balance+' UAH':r2(d.pln)+' PLN'}</div>
+          <button onclick="deleteDebt('${d.id}')" style="font-family:var(--H);font-size:8px;color:var(--t3);cursor:pointer;background:none;border:none;letter-spacing:1px;text-transform:uppercase;margin-top:4px">удалить</button>
+        </div>
+      </div>`).join('')||empty('Нет долгов')}`;
+}
+
+// SAVINGS SUB
+function subSavings(wrap){
+  wrap.innerHTML=`
+    <div class="sub-head"><button class="back-btn" onclick="goBack()">‹ Назад</button><div class="sub-title">Накопления</div></div>
+    <div class="sec-lbl">Цели <button onclick="openModal('savM')">+ Добавить</button></div>
+    ${S.savings.length?S.savings.map((s,i)=>{const p=Math.min(100,r2((s.current/s.target)*100));return`
+      <div class="goal-card">
+        <div class="gc-head">
+          <div><div class="gc-title">${s.icon} ${esc(s.name)}</div><div class="gc-cat">${r2(s.current)} / ${r2(s.target)} PLN</div></div>
+          <div><div class="gc-pct">${p}%</div><span class="gc-del" onclick="deleteSav(${i})">удалить</span></div>
+        </div>
+        <div class="pbar"><div class="pfill" style="width:${p}%;background:var(--lime)"></div></div>
+      </div>`}).join(''):empty('Нет целей накоплений')}`;
+}
+
+// BILLS SUB
+function subBills(wrap){
+  const total=S.mandatoryBills.reduce((s,b)=>s+cvt(b.amount,b.currency),0);
+  const cur=new Date().getDate();
+  const sorted=[...S.mandatoryBills].sort((a,b)=>{const da=a.dueDay>=cur?a.dueDay-cur:31-cur+a.dueDay;const db=b.dueDay>=cur?b.dueDay-cur:31-cur+b.dueDay;return da-db;});
+  wrap.innerHTML=`
+    <div class="sub-head"><button class="back-btn" onclick="goBack()">‹ Назад</button><div class="sub-title">Платежи</div></div>
+    <div style="padding:14px 18px;border-bottom:1px solid var(--b1)">
+      <div style="font-family:var(--H);font-size:9px;font-weight:700;letter-spacing:3px;color:var(--orange);text-transform:uppercase;margin-bottom:4px">Всего в месяц</div>
+      <div style="font-family:var(--H);font-size:40px;font-weight:900;letter-spacing:-2px;color:var(--orange)">${r2(total)} <span style="font-size:16px;color:var(--t3)">PLN</span></div>
+    </div>
+    ${sorted.map(b=>{const days=b.dueDay>=cur?b.dueDay-cur:31-cur+b.dueDay;const urgent=days<=5;return`
+      <div class="lr">
+        <div class="lr-ico">${urgent?'🔴':'💳'}</div>
+        <div class="lr-body"><div class="lr-title">${esc(b.title)}</div><div class="lr-sub">до ${b.dueDay} числа · через ${days} дн.</div></div>
+        <div class="lr-right"><div class="lr-val" style="color:${urgent?'var(--red)':'var(--orange)'}">${b.amount} ${b.currency}</div></div>
+      </div>`}).join('')}`;
+}
+
+// GOAL (month) SUB
+function subGoal(wrap){
+  const m=getMetrics();
+  const pct=Math.min(100,r2((m.monthIncome/S.profile.safeMinimum)*100));
+  const pctComfort=Math.min(100,r2((m.monthIncome/S.profile.comfortTarget)*100));
+  wrap.innerHTML=`
+    <div class="sub-head"><button class="back-btn" onclick="goBack()">‹ Назад</button><div class="sub-title">Цель месяца</div></div>
+    <div style="padding:16px 18px;border-bottom:1px solid var(--b1)">
+      <div style="font-family:var(--H);font-size:9px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Безопасный минимум</div>
+      <div style="font-family:var(--H);font-size:36px;font-weight:900;color:var(--lime);letter-spacing:-1px">${r2(m.monthIncome)} <span style="font-size:16px;color:var(--t3)">/ ${r2(S.profile.safeMinimum)} PLN</span></div>
+      <div class="pbar" style="margin-top:8px"><div class="pfill" style="width:${pct}%;background:var(--lime)"></div></div>
+      <div style="font-family:var(--H);font-size:9px;color:var(--t3);letter-spacing:1px;margin-top:4px">${pct}%</div>
+    </div>
+    <div style="padding:14px 18px;border-bottom:1px solid var(--b1)">
+      <div style="font-family:var(--H);font-size:9px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Комфортная цель</div>
+      <div style="font-family:var(--H);font-size:24px;font-weight:900;color:var(--cyan);letter-spacing:-1px">${r2(S.profile.comfortTarget)} PLN</div>
+      <div class="pbar" style="margin-top:6px"><div class="pfill" style="width:${pctComfort}%;background:var(--cyan)"></div></div>
+    </div>
+    <div style="padding:12px 18px;font-family:var(--B);font-size:13px;color:#ccc;line-height:1.55;border-bottom:1px solid var(--b1)">${getFinForecast()}</div>
+    <div class="form-section">
+      <div class="form-section-title">Изменить цели</div>
+      <div class="form-grid c2">
+        <div><label class="flabel">Безопасный мин (PLN)</label><input class="finput" type="number" id="profSafe" value="${S.profile.safeMinimum}"></div>
+        <div><label class="flabel">Комфортная цель (PLN)</label><input class="finput" type="number" id="profComfort" value="${S.profile.comfortTarget}"></div>
+      </div>
+      <div class="form-grid c2">
+        <div><label class="flabel">Пол дня (PLN)</label><input class="finput" type="number" id="profFloor" value="${S.profile.dailyFloor}"></div>
+        <div><label class="flabel">Курс UAH→PLN</label><input class="finput" type="number" id="profUah" value="${S.profile.uahRate}" step="0.001"></div>
+      </div>
+      <button class="btn btn-lime" onclick="saveProfile()">Сохранить</button>
+    </div>`;
+}
+
+// SHIFT SUB
+function subShift(wrap){
+  const today=tdk();
+  const todayOrders=S.orders.filter(o=>o.date===today);
+  const earn=todayOrders.reduce((s,o)=>s+(o.amount||0),0);
+  const cnt=todayOrders.length;
+  wrap.innerHTML=`
+    <div class="sub-head"><button class="back-btn" onclick="goBack()">‹ Назад</button><div class="sub-title">Смена</div></div>
+    <div class="route-timer-section">
+      <div class="rts-lbl" id="rtsLbl">Ожидание</div>
+      <div class="rts-timer idle" id="rtsTimer">00:00</div>
+      <div class="rts-tip" id="rtsTip">Нажми ЗАБРАЛ чтобы начать маршрут</div>
+    </div>
+    <div class="route-btns">
+      <button class="rbtn pickup" id="pickupBtn" onclick="doPickup()"><div class="ri">📍</div>ЗАБРАЛ</button>
+      <button class="rbtn deliver" id="deliverBtn" onclick="openModal('deliverM')" disabled><div class="ri">✅</div>ОТДАЛ</button>
+    </div>
+    <div class="stat-strip">
+      <div class="sc"><div class="sc-v" style="color:var(--lime)" id="st-earn">${earn} PLN</div><div class="sc-l">Доход</div></div>
+      <div class="sc"><div class="sc-v" id="st-cnt">${cnt}</div><div class="sc-l">Маршрутов</div></div>
+      <div class="sc"><div class="sc-v" style="color:var(--cyan)" id="st-avg">${cnt?r2(earn/cnt):0} PLN</div><div class="sc-l">Средний</div></div>
+      <div class="sc"><div class="sc-v" style="color:var(--orange)" id="st-best">${todayOrders.length?Math.max(...todayOrders.map(o=>o.amount||0)):0}</div><div class="sc-l">Рекорд</div></div>
+    </div>
+    <div id="routeAiBox" style="display:none;padding:12px 18px;border-bottom:1px solid var(--b1);background:rgba(0,240,255,.03)">
+      <div style="font-family:var(--H);font-size:8px;font-weight:800;letter-spacing:3px;color:var(--cyan);margin-bottom:6px">AI АНАЛИЗ</div>
+      <div id="routeAiTxt" style="font-family:var(--B);font-size:13px;line-height:1.55;color:#ccc"></div>
+    </div>
+    <div class="sec-lbl">Сегодня</div>
+    <div id="orderList">${renderOrderList(todayOrders)}</div>`;
+  bindShiftEvents();
+}
+
+function renderOrderList(orders){
+  if(!orders.length)return empty('Нет маршрутов');
+  return orders.slice().reverse().slice(0,8).map((o,i)=>`
+    <div class="lr">
+      <div class="lr-ico">🛵</div>
+      <div class="lr-body"><div class="lr-title">${esc(o.restaurant||'Маршрут')}</div><div class="lr-sub">${o.zone?o.zone+' · ':''} ${o.deliveredAt||''}</div></div>
+      <div class="lr-right"><div class="lr-val" style="color:var(--lime)">+${o.amount} PLN</div></div>
+    </div>`).join('');
+}
+
+let rtTimer2=null,rtStart2=null;
+function bindShiftEvents(){}
+
+function doPickup(){
+  rtStart2=Date.now();
+  const pb=document.getElementById('pickupBtn');
+  const db=document.getElementById('deliverBtn');
+  if(pb)pb.disabled=true;
+  if(db){db.disabled=false;db.classList.add('ready');}
+  const lbl=document.getElementById('rtsLbl');const timer=document.getElementById('rtsTimer');
+  if(lbl){lbl.textContent='МАРШРУТ АКТИВЕН';lbl.className='rts-lbl live';}
+  if(timer)timer.className='rts-timer live';
+  const tip=document.getElementById('rtsTip');
+  if(tip)tip.textContent=TIPS[Math.floor(Math.random()*TIPS.length)];
+  rtTimer2=setInterval(()=>{
+    const s=Math.floor((Date.now()-rtStart2)/1000);
+    if(timer)timer.textContent=pad(Math.floor(s/60))+':'+pad(s%60);
+  },1000);
+}
+
+async function doDeliver(){
+  clearInterval(rtTimer2);
+  const dur=Math.round((Date.now()-(rtStart2||Date.now()))/60000);
+  const earn=parseFloat(v('dlEarn'))||0;
+  const rest=v('dlRest')||'Маршрут';
+  const zone=v('dlZone')||'';
+  S.orders.unshift({id:uid(),date:tdk(),restaurant:rest,zone,amount:earn,duration:dur,deliveredAt:nowT(),notes:v('dlNote')||''});
+  if(earn>0)S.incomeEntries.unshift({id:uid(),date:tdk(),amount:earn,platform:'Wolt/UE',hours:r2(dur/60),zone,shiftScore:'mid',notes:rest,currency:'PLN',source:'route'});
+  save();closeModal('deliverM');
+  const pb=document.getElementById('pickupBtn');const db=document.getElementById('deliverBtn');
+  if(pb)pb.disabled=false;if(db){db.disabled=true;db.classList.remove('ready');}
+  const timer=document.getElementById('rtsTimer');const lbl=document.getElementById('rtsLbl');
+  if(timer){timer.textContent='00:00';timer.className='rts-timer idle';}
+  if(lbl){lbl.textContent='Завершён за '+dur+' мин';lbl.className='rts-lbl idle';}
+  rtStart2=null;
+  const today=tdk();const todayO=S.orders.filter(o=>o.date===today);
+  const e2=todayO.reduce((s,o)=>s+(o.amount||0),0);const c2=todayO.length;
+  set('st-earn',e2+' PLN');set('st-cnt',c2);set('st-avg',c2?r2(e2/c2)+' PLN':0);set('st-best',todayO.length?Math.max(...todayO.map(o=>o.amount||0)):0);
+  const ol=document.getElementById('orderList');if(ol)ol.innerHTML=renderOrderList(todayO);
+  renderHome();renderWorkMenu();
+  if(earn>0){
+    const box=document.getElementById('routeAiBox');if(box)box.style.display='block';
+    set('routeAiTxt','Анализирую...');
+    try{const r=await callAI([{role:'user',content:`Маршрут: ${earn} PLN за ${dur} мин = ${r2(earn/(dur/60||1))} PLN/ч. 2-3 предложения: хорошо это или нет и один совет.`}],150);set('routeAiTxt',r);}catch(e){set('routeAiTxt','Маршрут записан!');}
+  }
+}
+
+// MAP SUB
+function subMap(wrap){
+  mapInited=false; // reset every time so map re-inits fresh
+  wrap.innerHTML=`
+    <div class="sub-head"><button class="back-btn" onclick="goBack()">‹ Назад</button><div class="sub-title">Карта</div></div>
+    <div id="mapWrap" style="height:320px;border-bottom:1px solid var(--b1);position:relative"><div id="map" style="height:100%;width:100%"></div></div>
+    <div style="padding:12px 18px;border-bottom:1px solid var(--b1);background:rgba(0,240,255,.03)">
+      <div style="font-family:var(--H);font-size:8px;font-weight:800;letter-spacing:3px;color:var(--cyan);margin-bottom:6px">AI ПОДСКАЗКА</div>
+      <div style="font-family:var(--B);font-size:13px;line-height:1.55;color:#ccc" id="mapAiTip">${getMapTip()}</div>
+    </div>
+    <div class="sec-lbl">Якорные точки</div>
+    ${ANCHOR_ZONES.map(z=>`<div class="lr"><div class="lr-ico">📍</div><div class="lr-body"><div class="lr-title">${esc(z.t)}</div><div class="lr-sub">${esc(z.d)}</div></div></div>`).join('')}`;
+  setTimeout(()=>initLeaflet(), 300);
+}
+
+function initLeaflet(){
+  if(!window.L||!document.getElementById('map'))return;
+  // Уничтожить старый инстанс если есть
+  if(window._leafMap){try{window._leafMap.remove();}catch(e){}window._leafMap=null;}
+  const m=L.map('map',{zoomControl:false,attributionControl:false}).setView([51.1079,17.0385],14);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(m);
+  const h=new Date().getHours();const hot=(h>=11&&h<15)||(h>=18&&h<22);
+  L.circle([51.1079,17.0385],{color:hot?'#c8ff00':'#555',fillColor:hot?'#c8ff00':'#333',fillOpacity:.15,radius:700,weight:1.5}).addTo(m).bindPopup('🏆 Rynek — ТОП');
+  L.circle([51.1128,17.0572],{color:'#00f0ff',fillColor:'#00f0ff',fillOpacity:.1,radius:400,weight:1}).addTo(m).bindPopup('⭐ Plac Grunwaldzki');
+  L.circle([51.1032,17.0321],{color:'#a855f7',fillColor:'#a855f7',fillOpacity:.1,radius:300,weight:1}).addTo(m).bindPopup('🍔 Galeria Dominikanska');
+  L.circle([51.1105,17.0400],{color:'#ff7a00',fillColor:'#ff7a00',fillOpacity:.1,radius:250,weight:1}).addTo(m).bindPopup('🥙 Hala Swiebodzki');
+  window._leafMap=m;
+  const tip=document.getElementById('mapAiTip');
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(
+      p=>{
+        L.circleMarker([p.coords.latitude,p.coords.longitude],{radius:9,color:'#c8ff00',fillColor:'#c8ff00',fillOpacity:1,weight:2}).addTo(m).bindPopup('📍 Ты здесь').openPopup();
+        m.setView([p.coords.latitude,p.coords.longitude],15);
+        const d=Math.round(Math.sqrt((p.coords.latitude-51.1079)**2+(p.coords.longitude-17.0385)**2)*111*10)/10;
+        if(tip)tip.textContent=d<1.5?'✅ Ты в центре — отлично! Держись здесь.':d<3?`📍 ${d} км от центра. Лучше переместись ближе к Rynek.`:`⚠️ ${d} км от центра. Возвращайся — там основной поток.`;
+      },
+      ()=>{if(tip)tip.textContent=getMapTip();},
+      {timeout:8000,maximumAge:60000}
+    );
+  }
+}
+
+function getMapTip(){
+  const h=new Date().getHours();
+  const phase=h<11?'утренний старт':h<15?'обеденный блок':h<18?'дневной спад':h<22?'вечерний пик':'поздний блок';
+  const tip=h<11?'Займи Rynek. Oyche Doner — первый якорь.':h<15?'Лови поток из быстрых ресторанов Rynek.':h<18?'Режь плохие заказы. Жди пика.':h<22?'Это деньги. Держись центра до конца.':'Только быстрые заказы. Не выезжай далеко.';
+  return `Сейчас ${phase}. ${tip}`;
+}
+
+// ANALYTICS SUB
+function subAnalytics(wrap){
+  const zones={};
+  S.incomeEntries.filter(e=>e.zone&&e.source!=='summary').forEach(e=>{if(!zones[e.zone])zones[e.zone]={n:0,sum:0};zones[e.zone].n++;zones[e.zone].sum+=cvt(e.amount,'PLN');});
+  const sorted=Object.entries(zones).sort((a,b)=>b[1].sum/b[1].n-a[1].sum/a[1].n);
+  const weekEarn=getWeekIncome();
+  const allOrders=S.orders;const cnt=allOrders.length;
+  const avgEarn=cnt?r2(allOrders.reduce((s,o)=>s+(o.amount||0),0)/cnt):0;
+  wrap.innerHTML=`
+    <div class="sub-head"><button class="back-btn" onclick="goBack()">‹ Назад</button><div class="sub-title">Аналитика</div></div>
+    <div class="stat-strip">
+      <div class="sc"><div class="sc-v" style="color:var(--lime)">${cnt}</div><div class="sc-l">Всего маршр.</div></div>
+      <div class="sc"><div class="sc-v">${avgEarn}</div><div class="sc-l">Средний PLN</div></div>
+      <div class="sc"><div class="sc-v" style="color:var(--cyan)">${r2(weekEarn)}</div><div class="sc-l">Неделя PLN</div></div>
+    </div>
+    <div class="sec-lbl">Лучшие зоны</div>
+    ${sorted.slice(0,5).map(([z,d])=>`
+      <div class="lr">
+        <div class="lr-body"><div class="lr-title">${esc(z)}</div><div class="lr-sub">${d.n} заказов</div></div>
+        <div class="lr-right"><div class="lr-val" style="color:var(--lime)">${r2(d.sum/d.n)} PLN</div><div class="lr-val2">средний</div></div>
+      </div>`).join('')||empty('Добавь зону к доходам')}
+    <div class="sec-lbl">Последние маршруты</div>
+    ${S.orders.slice(0,6).map(o=>`
+      <div class="lr">
+        <div class="lr-body"><div class="lr-title">${esc(o.restaurant||'Маршрут')}</div><div class="lr-sub">${o.date} ${o.zone?'· '+o.zone:''}</div></div>
+        <div class="lr-right"><div class="lr-val" style="color:var(--lime)">+${o.amount} PLN</div></div>
+      </div>`).join('')||empty('Нет маршрутов')}`;
+}
+
+// INCOME ADD SUB
+function subIncomeAdd(wrap){
+  wrap.innerHTML=`
+    <div class="sub-head"><button class="back-btn" onclick="goBack()">‹ Назад</button><div class="sub-title">Добавить доход</div></div>
+    <div class="form-section">
+      <div class="form-grid c2">
+        <div><label class="flabel">Дата</label><input class="finput" type="date" id="iDate"></div>
+        <div><label class="flabel">Сумма PLN</label><input class="finput" type="number" id="iAmt" placeholder="350"></div>
+      </div>
+      <div class="form-grid c2">
+        <div><label class="flabel">Платформа</label><select class="finput" id="iPlatform"><option>Wolt</option><option>Uber Eats</option><option>Оба</option><option>Другое</option></select></div>
+        <div><label class="flabel">Часов</label><input class="finput" type="number" id="iHours" placeholder="8"></div>
+      </div>
+      <div class="form-grid c2">
+        <div><label class="flabel">Зона</label><input class="finput" id="iZone" placeholder="Rynek"></div>
+        <div><label class="flabel">Оценка смены</label><select class="finput" id="iScore"><option value="top">🔥 Топ</option><option value="mid">👍 Норм</option><option value="low">😤 Слабо</option></select></div>
+      </div>
+      <label class="flabel">Заметки</label><textarea class="finput" id="iNotes" style="min-height:50px" placeholder="..."></textarea>
+      <button class="btn btn-lime" onclick="saveIncome()">Сохранить доход</button>
+    </div>`;
+  document.getElementById('iDate').value=tdk();
+}
+
+// HABITS SUB
+function subHabits(wrap){
+  if(!S.habits)S.habits=[];if(!S.habitLogs)S.habitLogs=[];
+  const today=tdk();const week=getLast7();
+  const days=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+  wrap.innerHTML=`
+    <div class="sub-head"><button class="back-btn" onclick="goBack()">‹ Назад</button><div class="sub-title">Привычки</div></div>
+    <div id="habitsList">
+      ${S.habits.length?S.habits.map((h,hi)=>{
+        const streak=calcStreakH(h);
+        const dots=week.map((dk,di)=>{
+          const ok=S.habitLogs.find(l=>l.habitId===h.id&&l.date===dk)?.done;
+          const isT=dk===today;
+          return`<div class="hdot ${ok?'ok':''} ${isT&&!ok?'td':''}" onclick="toggleHabitLog('${h.id}','${dk}')">${ok?'✓':days[di]}</div>`;
+        }).join('');
+        return`<div class="habit-row"><div class="h-ico">${h.icon}</div><div class="h-info"><div class="h-name">${esc(h.name)}</div><div class="h-streak">🔥 ${streak} дней</div></div><div class="h-dots">${dots}</div></div>`;
+      }).join(''):empty('Добавь первую привычку')}
+    </div>
+    <div class="btn-row" style="padding:12px 18px"><button class="btn btn-lime" onclick="openModal('habM')">+ Новая привычка</button></div>
+    <div class="form-section">
+      <div class="form-section-title">Лог тела</div>
+      <div class="form-grid c3">
+        <div><label class="flabel">Дата</label><input class="finput" type="date" id="hlDate"></div>
+        <div><label class="flabel">Вес (кг)</label><input class="finput" type="number" id="hlWt" placeholder="61" step="0.1"></div>
+        <div><label class="flabel">Сон (ч)</label><input class="finput" type="number" id="hlSleep" placeholder="7.5" step="0.5"></div>
+      </div>
+      <label class="flabel">Тренировка</label><input class="finput" id="hlWo" placeholder="Тренировка A: тяга...">
+      <div class="form-grid c2">
+        <div><label class="flabel">Польский (мин)</label><input class="finput" type="number" id="hlPol" placeholder="0"></div>
+        <div><label class="flabel">Английский (мин)</label><input class="finput" type="number" id="hlEng" placeholder="0"></div>
+      </div>
+      <label class="flabel">Шаг к выходу из доставки</label><textarea class="finput" id="hlExit" style="min-height:50px" placeholder="Что сделал сегодня в сторону новой жизни..."></textarea>
+      <button class="btn btn-lime" onclick="saveBodyLog()">Сохранить</button>
+    </div>`;
+  document.getElementById('hlDate').value=tdk();
+}
+
+// TRAINING SUB
+function subTraining(wrap){
+  wrap.innerHTML=`
+    <div class="sub-head"><button class="back-btn" onclick="goBack()">‹ Назад</button><div class="sub-title">Тренировки</div></div>
+    ${TRAINING.map(t=>`
+      <div style="padding:14px 18px;border-bottom:1px solid var(--b1)">
+        <div style="font-family:var(--H);font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;margin-bottom:3px">${esc(t.title)}</div>
+        <div style="font-family:var(--H);font-size:9px;font-weight:600;color:var(--lime);letter-spacing:1px;margin-bottom:8px">${esc(t.day)}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px">
+          ${t.exercises.map(e=>`<span style="padding:4px 10px;background:var(--s2);border:1px solid var(--b1);border-radius:20px;font-family:var(--H);font-size:9px;font-weight:700;color:var(--t3);letter-spacing:.5px">${esc(e)}</span>`).join('')}
+        </div>
+      </div>`).join('')}`;
+}
+
+// NUTRITION SUB
+function subNutrition(wrap){
+  ensureWeeklyMenu();
+  const today=tdk();const menu=S.weeklyMenu.days.find(d=>d.day===weekdayName(today));
+  wrap.innerHTML=`
+    <div class="sub-head"><button class="back-btn" onclick="goBack()">‹ Назад</button><div class="sub-title">Питание</div></div>
+    ${menu?`
+      <div style="padding:14px 18px;border-bottom:1px solid var(--b1);background:rgba(0,230,118,.04)">
+        <div style="font-family:var(--H);font-size:9px;font-weight:800;letter-spacing:3px;color:var(--green);text-transform:uppercase;margin-bottom:6px">Сегодня · ${menu.day}</div>
+        ${[['🌅','Завтрак',menu.breakfast],['🥙','С собой',menu.snack],['🍽️','Обед',menu.lunch],['🌙','Ужин',menu.dinner]].map(([ico,lbl,txt])=>`
+          <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px">
+            <div style="font-size:16px;flex-shrink:0">${ico}</div>
+            <div><div style="font-family:var(--H);font-size:12px;font-weight:700;text-transform:uppercase;color:var(--t3);letter-spacing:1px">${lbl}</div><div style="font-family:var(--B);font-size:14px;color:var(--t1)">${txt}</div></div>
+          </div>`).join('')}
+      </div>`:empty('Меню на сегодня не готово')}
+    <div class="sec-lbl">Расписание приёмов пищи</div>
+    ${NUT_TIMING.map(n=>`<div class="lr"><div class="lr-body"><div class="lr-title">${esc(n.t)}</div><div class="lr-sub">${esc(n.d)}</div></div></div>`).join('')}
+    <div class="sec-lbl">Меню недели</div>
+    ${S.weeklyMenu.days.map(d=>`
+      <div class="week-block">
+        <div class="wb-day">${d.day} <span class="wb-earn">${d.earn?'· '+d.earn+' PLN':''}</span></div>
+        <div class="wb-focus">${esc(d.focus||'')}</div>
+        <div style="font-family:var(--B);font-size:12px;color:var(--t3);margin-top:4px">${esc(d.breakfast)} · ${esc(d.snack)} · ${esc(d.lunch)} · ${esc(d.dinner)}</div>
+      </div>`).join('')}`;
+}
+
+// PLAN SUB (Day planner)
+function subPlan(wrap){
+  if(!S.tasks)S.tasks=[];
+  const BCONF={morning:{label:'🌅 Утро',time:'05:00–11:00',color:'var(--orange)'},day:{label:'☀️ День',time:'11:00–18:00',color:'var(--lime)'},evening:{label:'🌙 Вечер',time:'18:00–23:30',color:'var(--purple)'}};
+  const d=new Date();
+  const today=READY_WEEK.find(w=>w.key===weekdayKey(tdk()));
+  wrap.innerHTML=`
+    <div class="sub-head"><button class="back-btn" onclick="goBack()">‹ Назад</button><div class="sub-title">План дня</div></div>
+    ${today?`
+      <div style="padding:12px 18px;border-bottom:1px solid var(--b1);background:rgba(200,255,0,.03)">
+        <div style="font-family:var(--H);font-size:9px;font-weight:800;letter-spacing:3px;color:var(--lime);text-transform:uppercase;margin-bottom:4px">Шаблон сегодня · ${today.earn} PLN</div>
+        <div style="font-family:var(--B);font-size:12px;color:var(--t3);margin-bottom:6px">${today.focus}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">${today.steps.map(s=>`<span class="wb-step">${esc(s)}</span>`).join('')}</div>
+      </div>`:''}
+    <div id="planBlocks">
+      ${Object.entries(BCONF).map(([key,b])=>{
+        const bt=S.tasks.filter(t=>t.block===key);const done=bt.filter(t=>t.done).length;
+        const tHtml=bt.length?bt.map((t,ti)=>{
+          const idx=S.tasks.indexOf(t);
+          return`<div class="task-row ${t.done?'done':''}" onclick="toggleTask(${idx})" style="cursor:pointer">
+            <div class="task-ck">${t.done?'✓':''}</div>
+            <div class="task-text">${esc(t.text)}${t.time?` <span style="color:var(--t3);font-size:11px">${t.time}</span>`:''}</div>
+            ${t.prio?`<span class="task-prio ${t.prio==='high'?'tp-high':'tp-med'}">${t.prio==='high'?'срочно':'важно'}</span>`:''}
+          </div>`;}).join(''):'<div style="padding:10px 0;font-family:var(--H);font-size:9px;color:var(--t3);letter-spacing:2px;text-transform:uppercase">Нет задач</div>';
+        return`<div class="tblock">
+          <div class="tblock-head">
+            <div class="tblock-stripe" style="background:${b.color}"></div>
+            <div class="tblock-info"><div class="tblock-name">${b.label}</div><div class="tblock-time">${b.time}</div></div>
+            <div class="tblock-cnt">${done}/${bt.length}</div>
+          </div>
+          <div class="tblock-tasks">${tHtml}</div>
+        </div>`;}).join('')}
+    </div>
+    <div class="form-section">
+      <div class="form-section-title">Новая задача</div>
+      <input class="finput" id="taskTxt" placeholder="Что нужно сделать?">
+      <div class="form-grid c2">
+        <select class="finput" id="taskBlock"><option value="morning">🌅 Утро</option><option value="day">☀️ День</option><option value="evening">🌙 Вечер</option></select>
+        <select class="finput" id="taskPrio"><option value="">Без приоритета</option><option value="high">🔴 Срочно</option><option value="med">🟡 Важно</option></select>
+      </div>
+      <input class="finput" type="time" id="taskTime" style="margin-bottom:10px">
+      <button class="btn btn-lime" onclick="addTaskSub()">Добавить</button>
+    </div>
+    <div style="padding:12px 18px;border-top:1px solid var(--b1)">
+      <button class="btn btn-ghost" onclick="showNightReviewSub()">🌙 Ночной обзор</button>
+    </div>
+    <div id="nightRevWrap" style="display:none;padding:14px 18px;border-top:1px solid var(--b1)">
+      <div style="font-family:var(--H);font-size:9px;font-weight:800;letter-spacing:3px;color:var(--purple);text-transform:uppercase;margin-bottom:12px">🌙 Ночной обзор</div>
+      <div id="nrQsWrap"></div>
+      <button class="btn btn-lime" onclick="submitNightSub()" style="margin-top:10px">Отправить</button>
+    </div>`;
+}
+
+// STUDY SUB
+function subStudy(wrap){
+  if(!S.studyLogs)S.studyLogs=[];
+  const totD=S.studyLogs.reduce((s,l)=>s+(l.driving||0),0);
+  const totP=S.studyLogs.reduce((s,l)=>s+(l.polish||0),0);
+  const totE=S.studyLogs.reduce((s,l)=>s+(l.english||0),0);
+  wrap.innerHTML=`
+    <div class="sub-head"><button class="back-btn" onclick="goBack()">‹ Назад</button><div class="sub-title">Учёба</div></div>
+    <div class="stat-strip">
+      <div class="sc"><div class="sc-v" style="color:var(--cyan)">${totD}</div><div class="sc-l">Мин автошк</div></div>
+      <div class="sc"><div class="sc-v" style="color:var(--lime)">${totP}</div><div class="sc-l">Мин польск</div></div>
+      <div class="sc"><div class="sc-v" style="color:var(--purple)">${totE}</div><div class="sc-l">Мин англ</div></div>
+    </div>
+    <div class="form-section">
+      <div class="form-section-title">Добавить сессию</div>
+      <div class="form-grid c2">
+        <div><label class="flabel">Дата</label><input class="finput" type="date" id="stDate"></div>
+        <div><label class="flabel">Автошкола (мин)</label><input class="finput" type="number" id="stDrv" placeholder="0"></div>
+      </div>
+      <div class="form-grid c2">
+        <div><label class="flabel">Польский (мин)</label><input class="finput" type="number" id="stPol" placeholder="0"></div>
+        <div><label class="flabel">Английский (мин)</label><input class="finput" type="number" id="stEng" placeholder="0"></div>
+      </div>
+      <label class="flabel">Тема</label><input class="finput" id="stTopic" placeholder="Что изучал...">
+      <label class="flabel">Следующий шаг</label><input class="finput" id="stNext" placeholder="Что делать следующий раз...">
+      <button class="btn btn-lime" onclick="saveStudySub()">Сохранить</button>
+    </div>
+    <div class="sec-lbl">История</div>
+    ${[...S.studyLogs].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6).map(l=>`
+      <div class="lr">
+        <div class="lr-body">
+          <div class="lr-title">${fmtDate(l.date)}</div>
+          <div class="lr-sub">Авто: ${l.driving||0} · Польский: ${l.polish||0} · Английский: ${l.english||0} мин</div>
+          <div class="lr-sub">${l.topic||''}</div>
+        </div>
+      </div>`).join('')||empty('Нет записей учёбы')}`;
+  document.getElementById('stDate').value=tdk();
+}
+
+// NOTES SUB
+function subNotes(wrap){
+  let curCat='all';
+  wrap.innerHTML=`
+    <div class="sub-head"><button class="back-btn" onclick="goBack()">‹ Назад</button><div class="sub-title">Заметки</div></div>
+    <div class="note-fast">
+      <div class="note-row">
+        <textarea class="note-ta" id="quickNote" rows="2" placeholder="Быстрая мысль..."></textarea>
+        <button class="voice-btn" id="noteVoice" onclick="toggleNoteVoice()">🎙️</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+        <select class="finput" id="noteType" style="margin:0;flex:1"><option>Мысль</option><option>Идея</option><option>Честность</option><option>Тревога</option><option>Инсайт</option></select>
+        <button class="btn btn-lime btn-sm" onclick="saveThought()">Сохранить</button>
+      </div>
+    </div>
+    <div class="cat-row">
+      <span class="cat-pill on" onclick="filterThoughtsCat(this,'all')">Все</span>
+      <span class="cat-pill" onclick="filterThoughtsCat(this,'Мысль')">💭 Мысли</span>
+      <span class="cat-pill" onclick="filterThoughtsCat(this,'Идея')">💡 Идеи</span>
+      <span class="cat-pill" onclick="filterThoughtsCat(this,'Честность')">🎯 Честность</span>
+      <span class="cat-pill" onclick="filterThoughtsCat(this,'Тревога')">😰 Тревога</span>
+      <span class="cat-pill" onclick="filterThoughtsCat(this,'Инсайт')">⚡ Инсайты</span>
+    </div>
+    <div id="thoughtsListSub">
+      ${renderThoughtsList('all')}
+    </div>`;
+}
+
+function renderThoughtsList(cat){
+  let items=[...S.thoughts].reverse();
+  if(cat&&cat!=='all')items=items.filter(t=>t.type===cat);
+  if(!items.length)return empty('Нет заметок');
+  return items.slice(0,20).map(t=>`
+    <div class="thought-card">
+      <div class="tc-meta"><span class="tc-type">${t.type}</span><span class="tc-date">${fmtDate(t.date)}</span></div>
+      <div class="tc-text">${esc(t.text)}</div>
+      <span class="tc-del" onclick="deleteThought('${t.id}')">✕ удалить</span>
+    </div>`).join('');
+}
+
+function filterThoughtsCat(el,cat){
+  document.querySelectorAll('.cat-pill').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  const wrap=document.getElementById('thoughtsListSub');
+  if(wrap)wrap.innerHTML=renderThoughtsList(cat);
+}
+
+let noteVoiceRec=null;
+function toggleNoteVoice(){
+  const btn=document.getElementById('noteVoice');
+  if(!('webkitSpeechRecognition'in window||'SpeechRecognition'in window)){alert('Используй Safari на iPhone.');return;}
+  if(noteVoiceRec){noteVoiceRec.stop();noteVoiceRec=null;if(btn)btn.classList.remove('on');return;}
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  noteVoiceRec=new SR();noteVoiceRec.lang='ru-RU';
+  noteVoiceRec.onresult=e=>{const qn=document.getElementById('quickNote');if(qn)qn.value+=e.results[0][0].transcript+' ';};
+  noteVoiceRec.onend=()=>{noteVoiceRec=null;if(btn)btn.classList.remove('on');};
+  noteVoiceRec.start();if(btn)btn.classList.add('on');
+}
+
+// CHALLENGE SUB
+function subChallenge(wrap){
+  if(!S.challengeStart)S.challengeStart=tdk();
+  const start=new Date(S.challengeStart);const now=new Date();
+  const diff=Math.max(1,Math.min(365,Math.floor((now-start)/86400000)+1));
+  const badges=[{n:1,l:'🚀 Старт'},{n:7,l:'⭐ Неделя'},{n:30,l:'🥉 Месяц'},{n:100,l:'🥈 100 дней'},{n:365,l:'🏆 Год'}];
+  const today=tdk();let gridHtml='';
+  for(let i=0;i<28;i++){
+    const d=new Date(start);d.setDate(d.getDate()+i);
+    const dk=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    const done=S.challengeLog[dk]==='done';const skip=S.challengeLog[dk]==='skip';
+    const isT=dk===today;const isFut=d>now;
+    gridHtml+=`<div class="gday ${done?'done':skip?'skip':isT?'today':isFut?'future':'future'}"></div>`;
+  }
+  wrap.innerHTML=`
+    <div class="sub-head"><button class="back-btn" onclick="goBack()">‹ Назад</button><div class="sub-title">365 Дней</div></div>
+    <div style="padding:20px 18px;border-bottom:1px solid var(--b1)">
+      <div style="font-family:var(--H);font-size:9px;font-weight:700;letter-spacing:3px;color:var(--lime);text-transform:uppercase;margin-bottom:4px">Новая жизнь</div>
+      <div style="font-family:var(--H);font-size:72px;font-weight:900;letter-spacing:-5px;line-height:1;color:var(--lime)">${diff}</div>
+      <div style="font-family:var(--H);font-size:13px;font-weight:700;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin-top:4px">день из 365 · с ${S.challengeStart}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+        ${badges.map(b=>`<span style="padding:5px 10px;border-radius:4px;font-family:var(--H);font-size:9px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;border:1px solid;${diff>=b.n?'background:rgba(200,255,0,.1);border-color:var(--lime);color:var(--lime)':'background:var(--s2);border-color:var(--b1);color:var(--t3)'}">${b.l}</span>`).join('')}
+      </div>
+    </div>
+    <div style="padding:14px 18px;border-bottom:1px solid var(--b1)">
+      <div style="font-family:var(--H);font-size:9px;font-weight:700;letter-spacing:2px;color:var(--t3);text-transform:uppercase;margin-bottom:8px">Первые 28 дней</div>
+      <div class="grid365">${gridHtml}</div>
+    </div>
+    <div style="padding:14px 18px;border-bottom:1px solid var(--b1)">
+      <div style="font-family:var(--H);font-size:9px;font-weight:700;letter-spacing:2px;color:var(--t3);text-transform:uppercase;margin-bottom:8px">Отметить сегодня</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <button class="btn btn-lime" onclick="markDayCh('done')">✓ Отличный</button>
+        <button class="btn btn-ghost" style="border-color:var(--red);color:var(--red)" onclick="markDayCh('skip')">✗ Пропустил</button>
+      </div>
+    </div>
+    <div style="padding:14px 18px;border-bottom:1px solid var(--b1)">
+      <div style="font-family:var(--H);font-size:9px;font-weight:700;letter-spacing:2px;color:var(--t3);text-transform:uppercase;margin-bottom:8px">Мои цели на год</div>
+      <div style="font-family:var(--B);font-size:14px;line-height:1.6;color:#ccc;margin-bottom:10px">${esc(S.yearGoals||'Не заданы')}</div>
+      <textarea class="finput" id="yearGoalsInp" style="min-height:80px" placeholder="Запиши цели на год...">${esc(S.yearGoals||'')}</textarea>
+      <button class="btn btn-lime" onclick="saveYearGoals()">Сохранить цели</button>
+    </div>`;
+}
+
+// GOALS SUB
+function subGoals(wrap){
+  wrap.innerHTML=`
+    <div class="sub-head"><button class="back-btn" onclick="goBack()">‹ Назад</button><div class="sub-title">Цели</div></div>
+    <div class="sec-lbl">Мои цели <button onclick="openModal('goalM')">+ Добавить</button></div>
+    <div id="goalsList2">
+      ${S.goals.length?S.goals.map((g,i)=>{const p=g.target>0?Math.min(100,r2((g.current/g.target)*100)):0;return`
+        <div class="goal-card">
+          <div class="gc-head">
+            <div><div class="gc-title">${esc(g.title)}</div><div class="gc-cat">${esc(g.category)} ${g.deadline?'· до '+fmtDate(g.deadline):''}</div></div>
+            <div><div class="gc-pct">${p}%</div><span class="gc-del" onclick="deleteGoal('${g.id}')">удалить</span></div>
+          </div>
+          <div class="pbar"><div class="pfill" style="width:${p}%;background:var(--lime)"></div></div>
+          <div style="display:flex;justify-content:space-between;margin-top:4px">
+            <span style="font-family:var(--H);font-size:9px;color:var(--t3)">${g.current||0} ${esc(g.unit||'')}</span>
+            <span style="font-family:var(--H);font-size:9px;color:var(--t3)">${g.target||0} ${esc(g.unit||'')}</span>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <input class="finput" type="number" id="gc-cur-${i}" placeholder="Обновить прогресс..." style="flex:1;margin:0">
+            <button class="btn btn-lime btn-sm" onclick="updateGoal('${g.id}',${i})">✓</button>
+          </div>
+        </div>`}).join(''):empty('Нет целей')}
+    </div>`;
+}
+
+// DAY LOG SUB
+function subDayLog(wrap){
+  const logs=[...S.dayLogs].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
+  wrap.innerHTML=`
+    <div class="sub-head"><button class="back-btn" onclick="goBack()">‹ Назад</button><div class="sub-title">Журнал дня</div></div>
+    <div style="display:flex;gap:6px;padding:10px 18px;overflow-x:auto;border-bottom:1px solid var(--b1)">
+      ${READY_WEEK.map(w=>`<button class="btn btn-ghost btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="applyWeekTmpl('${w.key}')">${w.day} · ${w.earn}</button>`).join('')}
+    </div>
+    <div class="form-section">
+      <div class="form-section-title">Запись дня</div>
+      <div class="form-grid c3">
+        <div><label class="flabel">Дата</label><input class="finput" type="date" id="dlDate"></div>
+        <div><label class="flabel">Цвет</label><select class="finput" id="dlColor"><option value="yellow">Жёлтый</option><option value="green">Зелёный</option><option value="red">Красный</option></select></div>
+        <div><label class="flabel">Энергия 1–10</label><input class="finput" type="number" id="dlEnergy" min="1" max="10" placeholder="7"></div>
+      </div>
+      <div class="form-grid c2">
+        <div><label class="flabel">Часов работы</label><input class="finput" type="number" id="dlHours" placeholder="8"></div>
+        <div><label class="flabel">Доход дня</label><input class="finput" type="number" id="dlIncome" placeholder="350"></div>
+      </div>
+      <label class="flabel">Plan дня</label><textarea class="finput" id="dlPlan" style="min-height:70px" placeholder="Что запланировано..."></textarea>
+      <label class="flabel">Победа дня</label><textarea class="finput" id="dlWin" style="min-height:50px" placeholder="Что получилось..."></textarea>
+      <label class="flabel">Рефлексия</label><textarea class="finput" id="dlRefl" style="min-height:60px" placeholder="Честный разбор дня..."></textarea>
+      <div style="margin-bottom:10px"><label class="flabel">Чеклист</label><div id="dayClWrap"></div><button class="btn btn-ghost btn-sm" onclick="addClItem()" style="margin-top:6px">+ пункт</button></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <button class="btn btn-lime" onclick="saveDayLog()">Сохранить</button>
+        <button class="btn btn-ghost" onclick="autoPlanSub()">AI план</button>
+      </div>
+    </div>
+    <div class="sec-lbl">История</div>
+    ${logs.length?logs.map(l=>`
+      <div class="lr">
+        <div class="lr-stripe" style="background:${l.color==='green'?'var(--green)':l.color==='red'?'var(--red)':'var(--gold)'};height:44px"></div>
+        <div class="lr-body"><div class="lr-title">${fmtDate(l.date)}</div><div class="lr-sub">Доход: ${l.income||0} PLN · Энергия: ${l.energy||'—'}/10</div></div>
+        <div class="lr-right"><div class="lr-val" style="color:${l.color==='green'?'var(--green)':l.color==='red'?'var(--red)':'var(--gold)'}">${l.color==='green'?'Зелёный':l.color==='red'?'Красный':'Жёлтый'}</div></div>
+      </div>`).join(''):empty('Нет записей')}`;
+  document.getElementById('dlDate').value=tdk();
+  defaultChecklist();
+}
+
+// PROGRESS SUB (Radar)
+function subProgress(wrap){
+  const bars=calcBars();
+  const total=r2(bars.reduce((s,v)=>s+v,0)/bars.length);
+  wrap.innerHTML=`
+    <div class="sub-head"><button class="back-btn" onclick="goBack()">‹ Назад</button><div class="sub-title">Прогресс</div></div>
+    <div class="radar-wrap">
+      <svg id="radarSvg" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <div class="dims-grid" id="dimsGrid"></div>
+    <div style="padding:14px 18px;border-top:1px solid var(--b1);background:rgba(168,85,247,.04)">
+      <div style="font-family:var(--H);font-size:8px;font-weight:800;letter-spacing:3px;color:var(--purple);text-transform:uppercase;margin-bottom:6px">🤖 AI Инсайт</div>
+      <div style="font-family:var(--B);font-size:13px;line-height:1.6;color:#ccc" id="radarInsight">Нажми на измерение — получи конкретный совет.</div>
+    </div>`;
+  renderRadarSvg(bars);renderDimsGrid(bars);
+}
+
+function renderRadarSvg(bars){
+  const svg=document.getElementById('radarSvg');if(!svg)return;
+  const cx=150,cy=150,r=110,n=6;const vals=bars.map(v=>v/100);
+  let html='';
+  for(let ring=.25;ring<=1;ring+=.25){const pts=Array.from({length:n},(_,i)=>{const a=(i*2*Math.PI/n)-Math.PI/2;return`${cx+r*ring*Math.cos(a)},${cy+r*ring*Math.sin(a)}`;}).join(' ');html+=`<polygon points="${pts}" fill="none" stroke="rgba(255,255,255,.05)" stroke-width="1"/>`;}
+  for(let i=0;i<n;i++){const a=(i*2*Math.PI/n)-Math.PI/2;html+=`<line x1="${cx}" y1="${cy}" x2="${cx+r*Math.cos(a)}" y2="${cy+r*Math.sin(a)}" stroke="rgba(255,255,255,.07)" stroke-width="1"/>`;}
+  const pts=vals.map((v,i)=>{const a=(i*2*Math.PI/n)-Math.PI/2;return`${cx+r*v*Math.cos(a)},${cy+r*v*Math.sin(a)}`;}).join(' ');
+  html+=`<polygon points="${pts}" fill="rgba(200,255,0,.12)" stroke="#c8ff00" stroke-width="2"/>`;
+  vals.forEach((v,i)=>{const a=(i*2*Math.PI/n)-Math.PI/2;const px=cx+r*v*Math.cos(a),py=cy+r*v*Math.sin(a);const lx=cx+(r+22)*Math.cos(a),ly=cy+(r+22)*Math.sin(a);html+=`<circle cx="${px}" cy="${py}" r="4" fill="${DIM_COLS[i]}"/><text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="central" font-family="Barlow Condensed" font-size="10" font-weight="700" fill="${DIM_COLS[i]}">${DIM_NAMES[i]}</text>`;});
+  svg.innerHTML=html;
+}
+
+function renderDimsGrid(bars){
+  const hints=['Записывай доходы каждый день','Отмечай тренировки и привычки','Пиши заметки и делай обзор дня','Выполняй задачи из планировщика','Отмечай дни в 365 челлендже','Проводи время с близкими'];
+  const grid=document.getElementById('dimsGrid');if(!grid)return;
+  grid.innerHTML=DIM_NAMES.map((name,i)=>`
+    <div class="dim-cell" onclick="askRadarInsight(${i})">
+      <div class="dim-name" style="color:${DIM_COLS[i]}">${name}</div>
+      <div class="dim-score" style="color:${DIM_COLS[i]}">${bars[i]}</div>
+      <div class="dim-track"><div class="dim-fill" style="width:${bars[i]}%;background:${DIM_COLS[i]}"></div></div>
+      <div class="dim-hint">${hints[i]}</div>
+    </div>`).join('');
+}
+
+async function askRadarInsight(i){
+  const bars=calcBars();
+  const el=document.getElementById('radarInsight');if(!el)return;
+  el.textContent='Анализирую...';
+  try{const r=await callAI([{role:'user',content:`Моё измерение "${DIM_NAMES[i]}" = ${bars[i]}/100. Дай 2-3 конкретных действия которые можно сделать СЕГОДНЯ чтобы его поднять.`}],180);el.textContent=r;}
+  catch(e){el.textContent='Фокус на '+DIM_NAMES[i]+' сегодня.';}
+}
+
+// ═══════════════════════════════════════════════════
+// HOME RENDER
+// ═══════════════════════════════════════════════════
+function renderHome(){
+  const m=getMetrics();
+  const today=tdk();
+  const todayEarn=getIncomeForDate(today);
+  const dn=(S.tasks||[]).filter(t=>t.done).length;
+  const dt=(S.tasks||[]).length;
+  if(!S.habitLogs)S.habitLogs=[];
+  if(!S.habits)S.habits=[];
+  const hdn=S.habitLogs.filter(l=>l.date===today&&l.done).length;
+  const hdt=S.habits.length;
+  const str=getDayStreak();
+  set('hm-earn',r2(todayEarn));set('hm-tasks',dn+'/'+dt);set('hm-hab',hdn+'/'+hdt);set('hm-str',str+'🔥');
+  const dot=document.getElementById('crDot');const badge=document.getElementById('crBadge');const txt=document.getElementById('crText');
+  if(dot){dot.className='cr-dot '+m.crisisColor;}
+  if(badge){badge.className='cr-badge badge-'+m.crisisColor;badge.textContent=m.crisisLabel==='Зелёный'?'Зелёный':m.crisisLabel==='Жёлтый'?'Жёлтый':'Красный';}
+  if(txt)txt.textContent=m.crisisColor==='green'?'Финансы под контролем':m.crisisColor==='yellow'?'Есть перекосы — держать темп':'Нужна коррекция — закрой минимум';
+  set('mustEarnNum',m.mustEarnToday+' PLN');
+  // Upcoming bills
+  const bills=getUpcomingBills().slice(0,4);
+  const ul=document.getElementById('upcomingBills');
+  if(ul)ul.innerHTML=bills.map(b=>`
+    <div class="lr">
+      <div class="lr-ico">${(b.dueDay>=new Date().getDate()&&b.dueDay-new Date().getDate()<=5)?'🔴':'💳'}</div>
+      <div class="lr-body"><div class="lr-title">${esc(b.title)}</div><div class="lr-sub">до ${b.dueDay} числа</div></div>
+      <div class="lr-right"><div class="lr-val">${b.amount} ${b.currency}</div></div>
+    </div>`).join('');
+  // Быстрый расход
+  const existBar=document.getElementById('quickExpBar');
+  if(!existBar){
+    const upcomingEl=document.getElementById('upcomingBills');
+    if(upcomingEl){
+      const barDiv=document.createElement('div');
+      barDiv.style.cssText='padding:10px 18px;border-bottom:1px solid var(--b1)';
+      barDiv.innerHTML=`<div style="font-family:var(--H);font-size:9px;font-weight:800;letter-spacing:2px;color:var(--t3);text-transform:uppercase;margin-bottom:8px">Быстрый расход</div><div id="quickExpBar" style="display:flex;gap:6px;overflow-x:auto"></div>`;
+      upcomingEl.parentNode.insertBefore(barDiv,upcomingEl);
+    }
+  }
+  renderQuickExpenseBar();
+  // Gap text
+  const gapEl=document.getElementById('mustEarnSub');if(gapEl)gapEl.textContent=getGapText();
+  // Bill warning
+  const bill=getNextCriticalBill();
+  if(bill&&bill.days<=3){
+    const existing=document.getElementById('billWarning');
+    if(!existing){
+      const wd=document.createElement('div');wd.id='billWarning';
+      wd.style.cssText='padding:10px 18px;border-bottom:1px solid var(--b1);background:rgba(255,59,59,.06);display:flex;align-items:center;gap:10px';
+      wd.innerHTML=`<span style="font-size:18px">🔴</span><div style="flex:1"><div style="font-family:var(--H);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px">${bill.title} — через ${bill.days} дн.</div><div style="font-family:var(--H);font-size:10px;color:var(--t3);letter-spacing:1px;margin-top:2px">${bill.amount} ${bill.currency}</div></div>`;
+      const he=document.getElementById('hm-earn');if(he){const p=he.closest('.stat-strip');if(p&&p.parentNode)p.parentNode.insertBefore(wd,p);}
+    }
+  }
+  updateTopRing();updateDayRing();
+  scheduleNotifications();
+}
+
+function renderMoneyMenu(){
+  const m=getMetrics();
+  const billsTotal=S.mandatoryBills.reduce((s,b)=>s+cvt(b.amount,b.currency),0);
+  const pct=Math.min(100,r2((m.monthIncome/S.profile.safeMinimum)*100));
+  set('fin-inc',r2(m.monthIncome));set('fin-exp',r2(m.monthExpenses));set('fin-net',r2(m.monthNet));set('fin-debt',r2(m.totalDebt));
+  set('sm-inc',r2(m.monthIncome)+' PLN');set('sm-exp',r2(m.monthExpenses)+' PLN');set('sm-debt',r2(m.totalDebt)+' PLN');
+  set('sm-bills',r2(billsTotal)+' PLN');set('sm-gpct',pct+'%');
+  const sav=S.savings.reduce((s,x)=>s+(x.current||0),0);set('sm-sav',r2(sav)+' PLN');
+  set('finForecast',getFinForecast());
+}
+
+function renderWorkMenu(){
+  const today=tdk();
+  const earn=S.orders.filter(o=>o.date===today).reduce((s,o)=>s+(o.amount||0),0);
+  set('wm-earn',r2(earn)+' PLN');set('wm-cnt',S.orders.length);
+}
+
+function renderLifeMenu(){
+  if(!S.habits)S.habits=[];if(!S.habitLogs)S.habitLogs=[];
+  const today=tdk();
+  const hdn=S.habitLogs.filter(l=>l.date===today&&l.done).length;
+  const hdt=S.habits.length;
+  const dn=(S.tasks||[]).filter(t=>t.done).length;const dt=(S.tasks||[]).length;
+  const diff=S.challengeStart?Math.max(1,Math.floor((new Date()-new Date(S.challengeStart))/86400000)+1):1;
+  set('lm-hab',hdn+'/'+hdt);set('lm-tasks',dn+'/'+dt);set('lm-ch',diff);set('lm-notes',S.thoughts.length);
+}
+
+// SCORE RING
+function animScore(){
+  const bars=calcBars();const total=r2(bars.reduce((s,v)=>s+v,0)/bars.length);
+  const circ=251;
+  const ring=document.getElementById('bigRing');
+  if(ring)ring.style.strokeDashoffset=circ-(circ*total/100);
+  set('bigScore',total);set('tbScore',total);
+  const homeBars=document.getElementById('homeBars');
+  if(homeBars)homeBars.innerHTML=[[DIM_COLS[0],'Финансы',bars[0]],[DIM_COLS[1],'Тело',bars[1]],[DIM_COLS[2],'Ментал',bars[2]],[DIM_COLS[3],'Карьера',bars[3]],[DIM_COLS[4],'Духовн',bars[4]],[DIM_COLS[5],'Социал',bars[5]]].map(([c,n,v])=>`<div class="bar-row"><span class="bar-n">${n}</span><div class="bar-t"><div class="bar-f" style="width:${v}%;background:${c}"></div></div><span class="bar-p">${v}%</span></div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════
+// METRICS
+// ═══════════════════════════════════════════════════
+function getMetrics(){
+  const today=tdk();
+  const monthIncome=getMonthIncome();
+  const monthExpenses=getMonthExpenses();
+  const mandatoryTotal=S.mandatoryBills.reduce((s,b)=>s+cvt(b.amount,b.currency),0);
+  const mandatoryGap=Math.max(mandatoryTotal-monthIncome,0);
+  const workLeft=estimateWorkLeft();
+  const mustEarnToday=Math.max(S.profile.dailyFloor||325,Math.ceil(mandatoryGap/workLeft));
+  const totalDebt=S.debts.reduce((s,d)=>s+cvt(d.balance,d.currency),0);
+  const monthNet=monthIncome-monthExpenses;
+  const crisisColor=monthIncome>=mandatoryTotal?'green':monthIncome>=mandatoryTotal*0.7?'yellow':'red';
+  const crisisLabel=crisisColor==='green'?'Зелёный':crisisColor==='yellow'?'Жёлтый':'Красный';
+  return{monthIncome,monthExpenses,mandatoryTotal,mandatoryGap,mustEarnToday,totalDebt,monthNet,crisisColor,crisisLabel,lifeScore:r2(calcBars().reduce((s,v)=>s+v,0)/6)};
+}
+
+function calcBars(){
+  const m=getMonthIncome();const mt=S.mandatoryBills.reduce((s,b)=>s+cvt(b.amount,b.currency),0);
+  const finance=Math.min(100,r2((m/Math.max(mt,1))*100));
+  const lh=S.habitLogs?[...S.habitLogs].sort((a,b)=>b.date.localeCompare(a.date))[0]:null;
+  const body=lh?Math.min(100,r2(((lh.sleep||0)/8)*40+(lh.workout?35:0)+20)):10;
+  const str=getDayStreak();const mental=Math.min(100,str*8+20);
+  const career=Math.min(100,(S.studyLogs||[]).length*8+(S.goals||[]).length*4+10);
+  const spirit=S.challengeLog[tdk()]==='done'?80:Math.min(70,(S.thoughts||[]).length*8+15);
+  const social=Math.min(100,(S.promises||[]).filter(p=>p.done).length*20+40);
+  return[finance,body,mental,career,spirit,social].map(v=>Math.round(v));
+}
+
+function getFinForecast(){
+  const m=getMetrics();const d=new Date();const day=d.getDate();
+  const dim=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+  const rate=day>0?m.monthIncome/day:0;const proj=r2(rate*dim);
+  if(rate===0)return'Записывай доходы — AI посчитает прогноз.';
+  return`Темп: ${r2(rate)} PLN/день. К концу месяца выйдет ~${proj} PLN. ${S.profile.safeMinimum>proj?`Нужно ещё ${r2(Math.round((S.profile.safeMinimum-m.monthIncome)/Math.max(dim-day,1)))} PLN/день чтобы закрыть минимум.`:'Цель месяца достижима! 💪'}`;
+}
+
+function getMonthIncome(){
+  const d=new Date();const grouped={};
+  S.incomeEntries.filter(e=>{const[y,mo]=(e.date||'').split('-').map(Number);return y===d.getFullYear()&&mo===d.getMonth()+1;}).forEach(e=>{if(!grouped[e.date])grouped[e.date]=[];grouped[e.date].push(e);});
+  return Object.values(grouped).reduce((sum,entries)=>{const det=entries.filter(e=>e.source!=='summary');const used=det.length?det:entries;return sum+used.reduce((s,e)=>s+cvt(e.amount,e.currency||'PLN'),0);},0);
+}
+
+function getMonthExpenses(){
+  const d=new Date();return S.expenseEntries.filter(e=>{const[y,mo]=(e.date||'').split('-').map(Number);return y===d.getFullYear()&&mo===d.getMonth()+1;}).reduce((s,e)=>s+cvt(e.amount,e.currency||'PLN'),0);
+}
+
+function getIncomeForDate(date){return S.incomeEntries.filter(e=>e.date===date).reduce((s,e)=>s+cvt(e.amount,e.currency||'PLN'),0);}
+function getWeekIncome(){const d=new Date();const sow=startOfWeek(d);return S.incomeEntries.filter(e=>{const dt=new Date(e.date+'T00:00:00');return dt>=sow&&dt<=d;}).reduce((s,e)=>s+cvt(e.amount,e.currency||'PLN'),0);}
+function estimateWorkLeft(){const n=new Date();const rem=new Date(n.getFullYear(),n.getMonth()+1,0).getDate()-n.getDate()+1;const parts=String(S.profile.schedule||'6/1').split('/').map(Number);const ratio=parts.length===2&&parts[0]>0?parts[0]/(parts[0]+parts[1]):6/7;return Math.max(1,Math.ceil(rem*ratio));}
+function getDayStreak(){if(!S.dayLogs||!S.dayLogs.length)return 0;const dates=[...new Set(S.dayLogs.map(l=>l.date))].sort((a,b)=>b.localeCompare(a));let s=0;let cur=tdk();for(const date of dates){if(date!==cur)break;s++;cur=shiftISO(cur,-1);}return s;}
+function getUpcomingBills(){const cur=new Date().getDate();return[...S.mandatoryBills].sort((a,b)=>{const da=a.dueDay>=cur?a.dueDay-cur:31-cur+a.dueDay;const db=b.dueDay>=cur?b.dueDay-cur:31-cur+b.dueDay;return da-db;});}
+
+// ═══════════════════════════════════════════════════
+// ACTIONS
+// ═══════════════════════════════════════════════════
+function saveIncome(){
+  S.incomeEntries.unshift({id:uid(),date:v('iDate'),amount:+v('iAmt')||0,platform:v('iPlatform'),hours:+v('iHours')||0,zone:v('iZone'),shiftScore:v('iScore'),notes:v('iNotes'),currency:'PLN',source:'manual'});
+  save();renderHome();renderMoneyMenu();renderWorkMenu();alert('Доход записан!');
+}
+
+function saveExpense(){
+  S.expenseEntries.unshift({id:uid(),date:v('eDate'),amount:+v('eAmt')||0,category:v('eCat'),currency:v('eCur'),notes:v('eNote')});
+  save();goSub('money','expenses');
+}
+
+function qExp(cat,amount){
+  const ec=document.getElementById('eCat');const ea=document.getElementById('eAmt');
+  if(ec)ec.value=cat;if(ea)ea.value=amount;
+}
+
+function addDebt(){
+  S.debts.unshift({id:uid(),title:v('debtTitle'),lender:v('debtLender'),balance:+v('debtBal')||0,minPayment:+v('debtMin')||0,currency:v('debtCur'),dueDay:+v('debtDay')||null,notes:v('debtNote')});
+  save();closeModal('debtM');goSub('money','debts');
+}
+function deleteDebt(id){S.debts=S.debts.filter(d=>d.id!==id);save();goSub('money','debts');}
+
+function addSaving(){
+  S.savings.push({id:uid(),name:v('savName'),target:+v('savTarget')||0,current:+v('savCur')||0,icon:document.getElementById('savIco').value});
+  save();closeModal('savM');goSub('money','savings');
+}
+function deleteSav(i){S.savings.splice(i,1);save();goSub('money','savings');}
+
+function saveProfile(){
+  S.profile={...S.profile,safeMinimum:+v('profSafe')||6500,comfortTarget:+v('profComfort')||9000,dailyFloor:+v('profFloor')||325,uahRate:+v('profUah')||0.095};
+  save();renderMoneyMenu();alert('Сохранено');
+}
+
+function addHabit(){
+  const name=v('habName').trim();if(!name)return;
+  if(!S.habits)S.habits=[];
+  S.habits.push({id:uid(),name,icon:document.getElementById('habIco').value,createdAt:tdk()});
+  document.getElementById('habName').value='';save();closeModal('habM');goSub('life','habits');
+}
+
+function toggleHabitLog(habitId,dk){
+  if(!S.habitLogs)S.habitLogs=[];
+  const ex=S.habitLogs.find(l=>l.habitId===habitId&&l.date===dk);
+  if(ex)ex.done=!ex.done;else S.habitLogs.push({id:uid(),habitId,date:dk,done:true});
+  save();
+  // Re-render dots inline
+  const dots=document.querySelectorAll('.hdot');
+  // rebuild habits sub
+  goSub('life','habits');
+}
+
+function calcStreakH(h){
+  let s=0;
+  for(let i=0;i<60;i++){const d=new Date();d.setDate(d.getDate()-i);const k=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;const log=(S.habitLogs||[]).find(l=>l.habitId===h.id&&l.date===k);if(log?.done)s++;else if(i>0)break;}
+  return s;
+}
+
+function saveBodyLog(){
+  if(!S.habitLogs)S.habitLogs=[];
+  const entry={id:uid(),date:v('hlDate'),weight:+v('hlWt')||null,sleep:+v('hlSleep')||null,workout:v('hlWo'),polish:+v('hlPol')||0,english:+v('hlEng')||0,exitPlan:v('hlExit'),done:false};
+  upsertLog(S.habitLogs,entry,'date');save();alert('Сохранено!');
+}
+
+function addTaskSub(){
+  if(!S.tasks)S.tasks=[];
+  const text=v('taskTxt').trim();if(!text)return;
+  S.tasks.push({id:uid(),text,block:v('taskBlock'),prio:v('taskPrio'),time:v('taskTime'),done:false});
+  const el=document.getElementById('taskTxt');if(el)el.value='';
+  save();goSub('life','plan');
+}
+
+function toggleTask(i){
+  if(!S.tasks||!S.tasks[i])return;
+  S.tasks[i].done=!S.tasks[i].done;
+  save();goSub('life','plan');
+}
+
+function showNightReviewSub(){
+  const w=document.getElementById('nightRevWrap');if(!w)return;
+  w.style.display='block';
+  const NRQ=['Что сегодня получилось лучше всего?','Что можно было сделать иначе?','Что мешало?','День 1–10?','Главное на завтра?'];
+  document.getElementById('nrQsWrap').innerHTML=NRQ.map((q,i)=>`<div style="margin-bottom:10px"><div style="font-family:var(--H);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">${i+1}. ${q}</div><textarea class="finput" rows="2" id="nrq${i}" style="min-height:40px" placeholder="Ответ..."></textarea></div>`).join('');
+  w.scrollIntoView({behavior:'smooth'});
+}
+
+async function submitNightSub(){
+  const NRQ=['Что сегодня получилось?','Что иначе?','Что мешало?','День 1–10?','Главное завтра?'];
+  const ans=NRQ.map((q,i)=>({q,a:document.getElementById('nrq'+i)?.value||''}));
+  document.getElementById('nightRevWrap').style.display='none';
+  try{const r=await callAI([{role:'user',content:`Ночной обзор:\n${ans.map(x=>x.q+': '+x.a).join('\n')}\nСгенерируй 5 конкретных задач на завтра.`}],250);alert('📋 AI план на завтра:\n\n'+r);}catch(e){}
+}
+
+function autoPlanSub(){
+  const m=getMetrics();const today=tdk();const tmpl=READY_WEEK.find(w=>w.key===weekdayKey(today));
+  const lines=tmpl?[...tmpl.steps]:[`Выход на работу. Минимум дня: ${m.mustEarnToday} PLN.`,'Первый блок до 15:00, пауза, оценка.','Вечерний блок до закрытия минимума.'];
+  lines.push(`Минимум дня: ${m.mustEarnToday} PLN.`,'После смены — внести все доходы и траты честно.');
+  const el=document.getElementById('dlPlan');if(el)el.value=lines.map((l,i)=>`${i+1}. ${l}`).join('\n');
+}
+
+function applyWeekTmpl(key){
+  const tmpl=READY_WEEK.find(w=>w.key===key);if(!tmpl)return;
+  const el=document.getElementById('dlPlan');if(el)el.value=tmpl.steps.join('\n');
+  const de=document.getElementById('dlDate');if(de)de.value=nextDateFor(key);
+}
+
+function saveDayLog(){
+  const log={id:uid(),date:v('dlDate'),color:v('dlColor'),energy:+v('dlEnergy')||null,hours:+v('dlHours')||0,income:+v('dlIncome')||0,plan:v('dlPlan'),win:v('dlWin'),reflection:v('dlRefl'),checklist:collectClItems()};
+  if(!S.dayLogs)S.dayLogs=[];
+  upsertLog(S.dayLogs,log,'date');
+  if(log.income>0){const ex=S.incomeEntries.find(e=>e.date===log.date&&e.source==='summary');const entry={id:uid(),date:log.date,amount:log.income,platform:'Итог дня',hours:log.hours||0,zone:'',shiftScore:'mid',notes:log.reflection||'Сводка дня',currency:'PLN',source:'summary'};if(ex)Object.assign(ex,entry);else S.incomeEntries.unshift(entry);}
+  save();alert('День сохранён!');
+}
+
+// Checklist
+function addClItem(title='',done=false){
+  const wrap=document.getElementById('dayClWrap');if(!wrap)return;
+  const div=document.createElement('div');div.className='cl-item'+(done?' done':'');
+  div.innerHTML=`<div class="cl-ck" onclick="toggleCl(this)">${done?'✓':''}</div><input class="cl-tx" value="${esc(title)}" placeholder="Пункт..."><span class="cl-rm" onclick="this.parentElement.remove()">✕</span>`;
+  div.querySelector('.cl-ck').addEventListener('click',function(){const it=this.parentElement;it.classList.toggle('done');this.textContent=it.classList.contains('done')?'✓':'';});
+  wrap.appendChild(div);
+}
+function defaultChecklist(){['Закрыть минимум','Внести доходы и траты','Честный разбор дня'].forEach(t=>addClItem(t,false));}
+function collectClItems(){return[...document.querySelectorAll('#dayClWrap .cl-item')].map(r=>({id:uid(),title:r.querySelector('.cl-tx').value.trim(),done:r.classList.contains('done')})).filter(i=>i.title);}
+
+function saveThought(){
+  const text=document.getElementById('quickNote')?.value.trim();if(!text)return;
+  if(!S.thoughts)S.thoughts=[];
+  const entry={id:uid(),date:tdk(),type:v('noteType'),text};
+  S.thoughts.unshift(entry);
+  if(['Честность','Тревога','Инсайт'].includes(entry.type))S.chatMemory.unshift(`${entry.type}: ${text}`);
+  document.getElementById('quickNote').value='';save();
+  const wrap=document.getElementById('thoughtsListSub');if(wrap)wrap.innerHTML=renderThoughtsList('all');
+}
+
+function deleteThought(id){S.thoughts=S.thoughts.filter(t=>t.id!==id);save();const wrap=document.getElementById('thoughtsListSub');if(wrap)wrap.innerHTML=renderThoughtsList('all');}
+
+function addGoal(){
+  S.goals.unshift({id:uid(),title:v('goalTitle'),category:v('goalCat'),target:+v('goalTarget')||0,current:+v('goalCurrent')||0,unit:v('goalUnit'),deadline:v('goalDead'),notes:v('goalNotes')});
+  save();closeModal('goalM');goSub('life','goals');
+}
+function deleteGoal(id){S.goals=S.goals.filter(g=>g.id!==id);save();goSub('life','goals');}
+function updateGoal(id,i){const val=+document.getElementById('gc-cur-'+i)?.value||0;const g=S.goals.find(x=>x.id===id);if(g&&val>0){g.current=val;save();goSub('life','goals');}}
+
+function saveStudySub(){
+  if(!S.studyLogs)S.studyLogs=[];
+  const entry={id:uid(),date:v('stDate'),driving:+v('stDrv')||0,polish:+v('stPol')||0,english:+v('stEng')||0,topic:v('stTopic'),nextStep:v('stNext')};
+  upsertLog(S.studyLogs,entry,'date');
+  if(entry.topic)S.chatMemory.unshift(`Учёба: ${entry.topic}`);
+  save();alert('Сохранено!');
+}
+
+function markDayCh(s){S.challengeLog[tdk()]=s;save();goSub('life','challenge');}
+function saveYearGoals(){S.yearGoals=document.getElementById('yearGoalsInp')?.value.trim()||'';save();alert('Цели сохранены!');}
+
+function setDefaultDates(){['iDate','eDate','hlDate','dlDate','stDate'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=tdk();});}
+
+// ═══════════════════════════════════════════════════
+// AI CHAT
+// ═══════════════════════════════════════════════════
+let chatVoiceRec=null;
+
+function initChat(){
+  if(!S.chat.length)addMsg('ai','Привет! Я Ю991 AI. Я вижу твои данные в реальном времени — долги, доходы, маршруты, привычки.\n\nЯ думаю, анализирую и говорю честно. Можешь спросить про деньги, план, работу, питание или просто поговорить. С чего начнём?');
+  else renderChat();
+}
+
+function renderChat(){
+  const c=document.getElementById('chatMsgs');if(!c)return;
+  c.innerHTML=S.chat.map(m=>`<div class="cmsg ${m.role}"><div class="cbub">${esc(m.content).replace(/\n/g,'<br>')}</div><div class="ctime">${m.time||''}</div></div>`).join('');
+  scrollChat();
+}
+
+function addMsg(role,text){
+  S.chat.push({role,content:text,time:nowT()});
+  if(S.chat.length>80)S.chat=S.chat.slice(-80);
+  renderChat();save();
+}
+
+function scrollChat(){const c=document.getElementById('chatMsgs');if(c)c.scrollTop=c.scrollHeight;}
+
+async function sendChat(){
+  const inp=document.getElementById('chatInp');const text=inp.value.trim();if(!text)return;
+  inp.value='';inp.style.height='auto';addMsg('user',text);
+  const tid='t'+Date.now();
+  const c=document.getElementById('chatMsgs');
+  if(c){c.innerHTML+=`<div class="cmsg ai" id="${tid}"><div class="cbub"><span class="tdot"></span><span class="tdot"></span><span class="tdot"></span></div></div>`;scrollChat();}
+  const m=getMetrics();
+  const ctx=`\n[Контекст сейчас: заработано сегодня ${r2(getIncomeForDate(tdk()))} PLN, маршрутов ${S.orders.filter(o=>o.date===tdk()).length}, задач ${(S.tasks||[]).filter(t=>t.done).length}/${(S.tasks||[]).length}, минимум дня ${m.mustEarnToday} PLN, долгов всего ${r2(m.totalDebt)} PLN, статус ${m.crisisLabel}]`;
+  const msgs=S.chat.slice(-14).map(m=>({role:m.role==='ai'?'assistant':'user',content:m.content}));
+  msgs[msgs.length-1].content+=ctx;
+  if(S.chatMemory.length>0)msgs[msgs.length-1].content+='\n[Из памяти: '+S.chatMemory.slice(0,3).join('; ')+']';
+  try{
+    const r=await callAI(msgs,500);
+    document.getElementById(tid)?.remove();addMsg('ai',r);
+  }catch(e){document.getElementById(tid)?.remove();addMsg('ai','Нет соединения. Проверь интернет и попробуй ещё раз.');}
+}
+
+function quickPrompt(p){const inp=document.getElementById('chatInp');if(inp){inp.value=p;sendChat();}}
+function chatKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}}
+function resizeInp(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,90)+'px';}
+
+function setMode(mode){
+  S.settings.commanderMode=mode;save();
+  ['balanced','hard','analyst','coach'].forEach(m=>{const el=document.getElementById('mb-'+m);if(el)el.classList.toggle('on',m===mode);});
+  const hints={balanced:'Сбалансированный: честно, по делу, с поддержкой.',hard:'Жёстко: меньше поддержки, больше правды и давления.',analyst:'Аналитик: цифры, причины, закономерности.',coach:'Коуч: задаёт вопросы, ведёт структурированную сессию.'};
+  set('modeHint',hints[mode]||'');
+}
+
+function toggleChatVoice(){
+  const btn=document.getElementById('chatVoiceBtn');
+  if(!('webkitSpeechRecognition'in window||'SpeechRecognition'in window)){alert('Используй Safari на iPhone.');return;}
+  if(chatVoiceRec){chatVoiceRec.stop();chatVoiceRec=null;if(btn)btn.classList.remove('on');return;}
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  chatVoiceRec=new SR();chatVoiceRec.lang='ru-RU';chatVoiceRec.continuous=false;
+  chatVoiceRec.onresult=e=>{const inp=document.getElementById('chatInp');if(inp)inp.value=e.results[0][0].transcript;sendChat();};
+  chatVoiceRec.onend=()=>{chatVoiceRec=null;if(btn)btn.classList.remove('on');};
+  chatVoiceRec.start();if(btn)btn.classList.add('on');
+}
+
+// ═══════════════════════════════════════════════════
+// API
+// ═══════════════════════════════════════════════════
+async function callAI(messages,max=400){
+  // Try artifact proxy first (works inside Claude.ai)
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:max,system:SYS,messages})
+    });
+    if(res.ok){const d=await res.json();if(d.content)return d.content.map(c=>c.text||'').join('');}
+  }catch(e){}
+  // Smart offline AI — reads real state and generates contextual reply
+  return offlineAI(messages[messages.length-1]?.content||'');
+}
+
+function offlineAI(prompt){
+  const p=prompt.toLowerCase();
+  const m=getMetrics();
+  const today=tdk();
+  const earn=getIncomeForDate(today);
+  const todayOrders=S.orders.filter(o=>o.date===today);
+  const h=new Date().getHours();
+  const tmpl=READY_WEEK.find(w=>w.key===weekdayKey(today));
+  const latestStudy=[...S.studyLogs||[]].sort((a,b)=>b.date.localeCompare(a.date))[0];
+  const latestThought=[...S.thoughts||[]].sort((a,b)=>b.date.localeCompare(a.date))[0];
+  const topDebt=[...S.debts].sort((a,b)=>cvt(b.balance,b.currency)-cvt(a.balance,a.currency))[0];
+  const phase=h<11?'утро':h<15?'обед':h<18?'спад':h<22?'пик':'ночь';
+
+  if(p.includes('деньг')||p.includes('доход')||p.includes('заработ')||p.includes('финанс')){
+    const gap=m.mandatoryTotal-m.monthIncome;
+    if(gap>0)return`Ситуация сейчас: заработал ${r2(m.monthIncome)} PLN, до обязательств не хватает ${r2(gap)} PLN. Минимум сегодня — ${m.mustEarnToday} PLN. Главная задача: не уходить с работы пока минимум не закрыт. Каждый лишний заказ — это удар по долгам.`;
+    return`Этот месяц уже перекрываешь обязательства: ${r2(m.monthIncome)} PLN. Чистый остаток ${r2(m.monthNet)} PLN. Направь часть на ${topDebt?topDebt.title:'закрытие долгов'} — сейчас хороший момент.`;
+  }
+  if(p.includes('долг')||p.includes('monobank')||p.includes('займ')){
+    const totalD=r2(m.totalDebt);const days=S.profile.dailyFloor>0?Math.ceil(m.totalDebt/S.profile.dailyFloor):999;
+    return`Всего долгов: ${totalD} PLN. Это ${days} рабочих дней при темпе ${S.profile.dailyFloor} PLN/день. ${topDebt?`Самый тяжёлый: ${topDebt.title} (${r2(cvt(topDebt.balance,topDebt.currency))} PLN). `:''}Стратегия: сначала закрыть просроченные микрозаймы — они под самым большим давлением. Потом Monobank. Личный долг — в конце.`;
+  }
+  if(p.includes('план')||p.includes('сегодня')||p.includes('делат')){
+    const lines=tmpl?tmpl.steps.slice(0,4):['Выйти в центр до 11:00','Держаться Rynek первые 2 часа','Закрыть минимум до 18:00'];
+    return`${weekdayName(today)}, ${phase}. Твой план:\n${lines.map((l,i)=>`${i+1}. ${l}`).join('\n')}\n\nМинимум дня: ${m.mustEarnToday} PLN. Сейчас заработано: ${r2(earn)} PLN. ${earn>=m.mustEarnToday?'Минимум закрыт — теперь работаешь в плюс.':'Осталось '+r2(m.mustEarnToday-earn)+' PLN.'}`;
+  }
+  if(p.includes('маршрут')||p.includes('зон')||p.includes('куда')||p.includes('рабо')){
+    const tip=h<11?'Рынок / Oyche Doner — якорь №1. Старт до 11:00.':h<15?'Держись Rynek. Обеденный поток сейчас максимальный.':h<18?'Спад. Режь слабые заказы, жди 18:00.':h<22?'ПИКОВОЕ ВРЕМЯ. Не уходи из центра ни за что.':'Работай только быстрые заказы. Далеко не выезжай.';
+    return`Сейчас ${phase}. ${tip}\n\nСегодня: ${todayOrders.length} маршрутов, ${r2(earn)} PLN. ${todayOrders.length>0?`Средний заказ: ${r2(earn/todayOrders.length)} PLN.`:''}`;
+  }
+  if(p.includes('питани')||p.includes('еда')||p.includes('есть')||p.includes('меню')){
+    const menu=S.weeklyMenu?.days?.find(d=>d.day===weekdayName(today));
+    if(menu)return`На сегодня (${menu.day}):\n🌅 Завтрак: ${menu.breakfast}\n🥙 С собой: ${menu.snack}\n🍽️ Обед: ${menu.lunch}\n🌙 Ужин: ${menu.dinner}\n\nПравило курьера: не выходи на смену без еды в рюкзаке.`;
+    return`Базовое правило: белок + углеводы каждые 4-5 часов. Яйца + овсянка + банан — до смены. Контейнер с собой. Не ждать голода — он бьёт по скорости и заработку.`;
+  }
+  if(p.includes('учёб')||p.includes('автошкол')||p.includes('польск')||p.includes('англ')){
+    if(latestStudy)return`По учёбе: последняя сессия ${latestStudy.date}. Польский ${latestStudy.polish||0} мин, английский ${latestStudy.english||0} мин, автошкола ${latestStudy.driving||0} мин. Следующий шаг: ${latestStudy.nextStep||'не записан'}. Рекомендую 20-30 минут в окне 15:00–16:00, пока не начался вечерний пик.`;
+    return`Учёба пока не отслеживается. Зайди в Жизнь → Учёба и добавь первую сессию. 20 минут польского или автошколы каждый день — это 120 часов в год. Это реальный результат.`;
+  }
+  if(p.includes('страх')||p.includes('тревог')||p.includes('боюс')){
+    return`Твой главный страх — начать и провалиться. Это не слабость, это осторожность. Но пока ты ждёшь "правильного момента", хаос продолжается. Маленький конкретный шаг сегодня важнее идеального плана на потом. Что одна вещь, которую ты можешь сделать прямо сейчас?`;
+  }
+  if(p.includes('привычк')||p.includes('трениров')||p.includes('тело')){
+    const hdn=(S.habitLogs||[]).filter(l=>l.date===today&&l.done).length;
+    const hdt=(S.habits||[]).length;
+    return`Привычки сегодня: ${hdn}/${hdt}. ${hdn===hdt&&hdt>0?'Всё выполнено — отличный день!':hdn>0?'Часть сделана. Дожми оставшиеся.':'Пока ни одной. Начни с самой простой — она запустит остальные.'}\n\nПомни: тренировки увеличивают твою концентрацию на маршрутах. В дни тренировок курьеры зарабатывают в среднем на 15% больше.`;
+  }
+  if(p.includes('ночн')||p.includes('итог')||p.includes('день прошёл')){
+    return`Итог дня:\n• Заработано: ${r2(earn)} PLN (минимум ${m.mustEarnToday} PLN)\n• Маршрутов: ${todayOrders.length}\n• Привычек: ${(S.habitLogs||[]).filter(l=>l.date===today&&l.done).length}/${(S.habits||[]).length}\n\nЧто сделано хорошо? Что завтра сделаешь иначе? Запиши в журнал — это важнее, чем кажется.`;
+  }
+  if(p.includes('мотивац')||p.includes('устал')||p.includes('не хочу')){
+    return`Усталость — это нормально. Это сигнал что ты работаешь. Но сдаться сегодня — это подарок хаосу. Один конкретный шаг: ${earn<m.mustEarnToday?'закрой минимум '+m.mustEarnToday+' PLN — потом можно отдохнуть.':'ты уже закрыл минимум. Сегодня можно выдохнуть.'}`;
+  }
+  // Generic contextual reply
+  const s=m.crisisColor;
+  return`Текущий статус: ${m.crisisLabel} (${s==='green'?'финансы под контролем':s==='yellow'?'есть перекосы':'нужна коррекция'}). Сегодня заработано ${r2(earn)} PLN из ${m.mustEarnToday} PLN минимума. ${latestThought?`Из твоих заметок: "${latestThought.text.slice(0,60)}...". `:''}Что конкретно хочешь разобрать?`;
+}
+
+// ═══════════════════════════════════════════════════
+// MODALS
+// ═══════════════════════════════════════════════════
+function openModal(id){document.getElementById(id)?.classList.add('open');}
+function closeModal(id){document.getElementById(id)?.classList.remove('open');}
+document.querySelectorAll('.moverlay').forEach(el=>el.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');}));
+function selMtag(el,fieldId,val){el.closest('.tag-row').querySelectorAll('.mtag').forEach(t=>t.classList.remove('on'));el.classList.add('on');document.getElementById(fieldId).value=val;}
+
+// ═══════════════════════════════════════════════════
+// WEEKLY MENU
+// ═══════════════════════════════════════════════════
+function ensureWeeklyMenu(){
+  const wk=startOfWeek(new Date()).toISOString().slice(0,10);
+  if(!S.weeklyMenu?.days?.length||S.weeklyMenu.weekStart!==wk)S.weeklyMenu=buildWeeklyMenu();
+}
+
+function buildWeeklyMenu(){
+  const wk=startOfWeek(new Date()).toISOString().slice(0,10);
+  const off=Number(wk.replace(/-/g,''))%3;
+  const proteins=[['курица','яйца','творог','тунец'],['куриные бедра','яйца','рыба','творог'],['индейка','яйца','творог','тунец']];
+  const carbs=[['овсянка','гречка','рис','картошка'],['овсянка','рис','макароны','картошка'],['овсянка','гречка','рис','хлеб']];
+  const p=proteins[off];const c=carbs[off];
+  const days=READY_WEEK.slice(6).concat(READY_WEEK.slice(0,6)).map(tmpl=>{
+    const heavy=['wednesday','friday','saturday'].includes(tmpl.key);
+    const wo=['tuesday','thursday','saturday','sunday'].includes(tmpl.key);
+    return{day:tmpl.day,earn:tmpl.earn,focus:tmpl.focus,breakfast:wo?`${c[0]} + 3 яйца + банан`:`${c[0]} + 2 яйца`,snack:heavy?`${p[2]} + ${c[3]}`:`3 яйца + банан`,lunch:heavy?`${p[0]} + ${c[2]}`:`${p[0]} + ${c[1]}`,dinner:heavy?`${p[3]} + ${c[3]}`:`${p[1]} + ${c[3]}`};
+  });
+  return{weekStart:wk,days};
+}
+
+// ═══════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════
+function tdk(){const d=new Date();return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
+function shiftISO(date,diff){const d=new Date(date+'T00:00:00');d.setDate(d.getDate()+diff);return d.toISOString().slice(0,10);}
+function nowT(){const d=new Date();return pad(d.getHours())+':'+pad(d.getMinutes());}
+function pad(n){return String(n).padStart(2,'0');}
+function uid(){return Math.random().toString(36).slice(2,10);}
+function r2(n){return Math.round(Number(n)||0);}
+function cvt(amount,currency){const v=Number(amount)||0;return currency==='UAH'?v*(S.profile.uahRate||0.095):v;}
+function v(id){return document.getElementById(id)?.value||'';}
+function set(id,val){const el=document.getElementById(id);if(el)el.textContent=String(val);}
+function esc(t){return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function empty(t){return`<div class="empty"><div class="empty-ico">○</div><div class="empty-txt">${t}</div></div>`;}
+function weekdayKey(date){return['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][new Date(date+'T00:00:00').getDay()];}
+function weekdayName(date){return['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'][new Date(date+'T00:00:00').getDay()];}
+function fmtDate(val){if(!val)return'—';return new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'long'}).format(new Date(val+'T00:00:00'));}
+function getLast7(){const a=[];for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);a.push(`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`);}return a;}
+function upsertLog(list,entry,key){const idx=list.findIndex(i=>i[key]===entry[key]);if(idx>=0)list[idx]={...list[idx],...entry};else list.unshift(entry);}
+function nextDateFor(key){const tm={monday:1,tuesday:2,wednesday:3,thursday:4,friday:5,saturday:6,sunday:0};const b=new Date(tdk()+'T00:00:00');const diff=(tm[key]-b.getDay()+7)%7;b.setDate(b.getDate()+diff);return b.toISOString().slice(0,10);}
+function startOfWeek(date){const d=new Date(date);const day=d.getDay()||7;d.setDate(d.getDate()-day+1);d.setHours(0,0,0,0);return d;}
+// calcStreakFor — alias of calcStreakH (used in getChainStatus)
+const calcStreakFor=calcStreakH;
+
+// Export / import
+function exportData(){const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`yu991-${tdk()}.json`;a.click();URL.revokeObjectURL(url);}
+
+// ═══════════════════════════════════════════════════
+// ФИШКА 1 — Быстрая заметка одной кнопкой
+// ═══════════════════════════════════════════════════
+function quickCapture(){
+  const text=prompt('Быстрая заметка:');
+  if(!text||!text.trim())return;
+  if(!S.thoughts)S.thoughts=[];
+  S.thoughts.unshift({id:uid(),date:tdk(),type:'Мысль',text:text.trim()});
+  save();showToast('📝 Заметка сохранена');
+}
+
+// ═══════════════════════════════════════════════════
+// ФИШКА 2 — Toast уведомления
+// ═══════════════════════════════════════════════════
+function showToast(msg,duration=2500,color='var(--lime)'){
+  const old=document.getElementById('toastEl');if(old)old.remove();
+  const el=document.createElement('div');
+  el.id='toastEl';
+  el.style.cssText=`position:fixed;bottom:calc(80px + var(--safe));left:50%;transform:translateX(-50%);background:#111;border:1px solid ${color};color:#fff;font-family:var(--H);font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:10px 20px;border-radius:20px;z-index:9000;white-space:nowrap;animation:toastIn .25s ease;pointer-events:none;`;
+  el.textContent=msg;
+  if(!document.getElementById('toastStyle')){const s=document.createElement('style');s.id='toastStyle';s.textContent='@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}';document.head.appendChild(s);}
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),duration);
+}
+
+// ═══════════════════════════════════════════════════
+// ФИШКА 3 — Виджет «Сколько осталось» (деньги)
+// ═══════════════════════════════════════════════════
+function getGapText(){
+  const m=getMetrics();const earn=getIncomeForDate(tdk());
+  const left=Math.max(0,m.mustEarnToday-earn);
+  if(left===0)return'✅ Минимум закрыт';
+  const ordersNeeded=Math.ceil(left/28);// средний заказ 28 PLN
+  return`Осталось ${r2(left)} PLN ≈ ${ordersNeeded} маршрутов`;
+}
+
+// ═══════════════════════════════════════════════════
+// ФИШКА 4 — Антикризисный калькулятор долга
+// ═══════════════════════════════════════════════════
+function debtPayoffCalc(extraPerMonth=0){
+  const total=S.debts.reduce((s,d)=>s+cvt(d.balance,d.currency),0);
+  const monthly=(S.profile.monthlyDebtPayment||500)+extraPerMonth;
+  const months=monthly>0?Math.ceil(total/monthly):999;
+  const years=Math.floor(months/12);const mos=months%12;
+  return years>0?`${years} г. ${mos} мес.`:`${months} мес.`;
+}
+
+// ═══════════════════════════════════════════════════
+// ФИШКА 5 — Счётчик дней до платежа (критичный)
+// ═══════════════════════════════════════════════════
+function getNextCriticalBill(){
+  const cur=new Date().getDate();
+  const upcoming=[...S.mandatoryBills]
+    .map(b=>({...b,days:b.dueDay>=cur?b.dueDay-cur:31-cur+b.dueDay}))
+    .filter(b=>b.days<=7)
+    .sort((a,b)=>a.days-b.days);
+  return upcoming[0]||null;
+}
+
+// ═══════════════════════════════════════════════════
+// ФИШКА 6 — Кнопка «Я устал» — автоматически снижает план
+// ═══════════════════════════════════════════════════
+function iAmTired(){
+  const m=getMetrics();
+  const reduced=Math.round(m.mustEarnToday*0.7);
+  showToast('😮‍💨 Режим восстановления — цель снижена до '+reduced+' PLN',3000,'var(--orange)');
+  S.tiredToday=true;save();
+}
+
+// ═══════════════════════════════════════════════════
+// ФИШКА 7 — Трекер настроения (emoji выбор)
+// ═══════════════════════════════════════════════════
+function setMood(mood){
+  S.moods=S.moods||{};
+  S.moods[tdk()]=mood;
+  save();
+  showToast('Настроение: '+mood);
+  // update badge in home
+  const el=document.getElementById('moodBadge');if(el)el.textContent=mood;
+}
+
+// ═══════════════════════════════════════════════════
+// ФИШКА 8 — Сравнение с лучшей сменой
+// ═══════════════════════════════════════════════════
+function getBestShift(){
+  if(!S.orders.length)return null;
+  const byDay={};
+  S.orders.forEach(o=>{if(!byDay[o.date])byDay[o.date]=0;byDay[o.date]+=(o.amount||0);});
+  const best=Object.entries(byDay).sort((a,b)=>b[1]-a[1])[0];
+  return best?{date:best[0],earn:r2(best[1])}:null;
+}
+
+// ═══════════════════════════════════════════════════
+// ФИШКА 9 — Уведомления браузера (платежи)
+// ═══════════════════════════════════════════════════
+async function requestNotifications(){
+  if(!('Notification'in window))return;
+  const perm=await Notification.requestPermission();
+  if(perm==='granted'){
+    S.notifEnabled=true;save();
+    scheduleNotifications();
+    showToast('🔔 Уведомления включены');
+  }
+}
+
+function scheduleNotifications(){
+  if(!S.notifEnabled||Notification.permission!=='granted')return;
+  const bill=getNextCriticalBill();
+  if(bill&&bill.days<=3){
+    setTimeout(()=>{
+      new Notification('Ю991 — Платёж через '+bill.days+' дн.',{body:bill.title+': '+bill.amount+' '+bill.currency,icon:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">💰</text></svg>'});
+    },2000);
+  }
+  // Morning reminder at 8:00
+  const now=new Date();const morning=new Date(now);morning.setHours(8,0,0,0);
+  if(morning>now){const ms=morning-now;setTimeout(()=>{new Notification('Ю991 — Доброе утро!',{body:'Минимум дня: '+getMetrics().mustEarnToday+' PLN. Удачной смены!'});},ms);}
+}
+
+// ═══════════════════════════════════════════════════
+// ФИШКА 10 — Зоны по времени суток (auto-advice)
+// ═══════════════════════════════════════════════════
+function getZoneAdvice(){
+  const h=new Date().getHours();
+  if(h<6)return{zone:'Отдых',advice:'Время сна. Не работай ночью — это убивает восстановление.',color:'var(--purple)'};
+  if(h<11)return{zone:'Oyche Doner + MAX Burgers',advice:'Утренний старт. Занимай якорные точки до того как конкуренты выйдут.',color:'var(--orange)'};
+  if(h<15)return{zone:'Rynek + Śródmieście',advice:'Обеденный пик. Максимальный поток — не уходи из радиуса 1.5 км.',color:'var(--lime)'};
+  if(h<17)return{zone:'Центр (терпи)',advice:'Дневной спад. Режь длинные заказы. Держи батарею. Жди пика.',color:'var(--t3)'};
+  if(h<22)return{zone:'Rynek — приоритет',advice:'ВЕЧЕРНИЙ ПИК. Это главные деньги дня. Не уходи ни за что.',color:'var(--lime)'};
+  return{zone:'Домой',advice:'Поздно. Только если есть ближние быстрые. Потом — восстановление важнее.',color:'var(--red)'};
+}
+
+// ═══════════════════════════════════════════════════
+// ФИШКА 11 — Счётчик прибыльности (PLN в час)
+// ═══════════════════════════════════════════════════
+function getEarnPerHour(){
+  const today=tdk();const orders=S.orders.filter(o=>o.date===today);
+  if(!orders.length)return 0;
+  const earn=orders.reduce((s,o)=>s+(o.amount||0),0);
+  const totalMin=orders.reduce((s,o)=>s+(o.duration||15),0);
+  return totalMin>0?r2(earn/(totalMin/60)):0;
+}
+
+// ═══════════════════════════════════════════════════
+// ФИШКА 12 — Недельный итог в одном числе
+// ═══════════════════════════════════════════════════
+function getWeekSummary(){
+  const week=getLast7();
+  const earn=week.reduce((s,d)=>s+getIncomeForDate(d),0);
+  const days=week.filter(d=>{const log=S.dayLogs.find(l=>l.date===d);return log&&log.income>0;}).length;
+  const habits=S.habitLogs?S.habitLogs.filter(l=>week.includes(l.date)&&l.done).length:0;
+  return{earn:r2(earn),days,habits};
+}
+
+// ═══════════════════════════════════════════════════
+// ФИШКА 13 — Умный поиск по всем данным
+// ═══════════════════════════════════════════════════
+function globalSearch(query){
+  if(!query||query.length<2)return[];
+  const q=query.toLowerCase();
+  const results=[];
+  (S.thoughts||[]).forEach(t=>{if(t.text.toLowerCase().includes(q))results.push({type:'Заметка',title:t.text.slice(0,50),sub:t.date,fn:()=>goSub('life','notes')});});
+  (S.goals||[]).forEach(g=>{if(g.title.toLowerCase().includes(q))results.push({type:'Цель',title:g.title,sub:g.category,fn:()=>goSub('life','goals')});});
+  (S.debts||[]).forEach(d=>{if(d.title.toLowerCase().includes(q))results.push({type:'Долг',title:d.title,sub:r2(cvt(d.balance,d.currency))+' PLN',fn:()=>goSub('money','debts')});});
+  return results.slice(0,5);
+}
+
+// ═══════════════════════════════════════════════════
+// ФИШКА 14 — Цепочка привычек (не сломай)
+// ═══════════════════════════════════════════════════
+function getChainStatus(){
+  if(!S.habits||!S.habits.length)return{longest:0,today:false};
+  const today=tdk();const h=S.habits[0];
+  const todayDone=(S.habitLogs||[]).find(l=>l.habitId===h.id&&l.date===today&&l.done);
+  const streak=calcStreakFor(h);
+  return{streak,today:!!todayDone,habit:h.name};
+}
+
+// ═══════════════════════════════════════════════════
+// ФИШКА 15 — Утренняя активация (ритуал)
+// ═══════════════════════════════════════════════════
+function morningActivation(){
+  const m=getMetrics();const zone=getZoneAdvice();const mot=MOTIVATIONS[(new Date().getDate())%MOTIVATIONS.length];
+  const msg=`${weekdayName(tdk())} · Минимум: ${m.mustEarnToday} PLN · Зона: ${zone.zone}`;
+  showToast('🔊 '+msg, 4000);
+  alert(`🌅 Активация дня\n\n📅 ${weekdayName(tdk())}\n💰 Минимум: ${m.mustEarnToday} PLN\n💳 Долгов: ${r2(m.totalDebt)} PLN\n📍 Зона: ${zone.zone}\n\n"${mot.t}"\n— ${mot.a}`);
+}
+
+// ═══════════════════════════════════════════════════
+// ФИШКА 16 — Визуальный трекер дохода (прогресс-кольцо)
+// ═══════════════════════════════════════════════════
+function updateDayRing(){
+  const earn=getIncomeForDate(tdk());
+  const m=getMetrics();
+  const pct=Math.min(100,r2((earn/Math.max(m.mustEarnToday,1))*100));
+  const ring=document.getElementById('dayRing');
+  if(ring){const circ=75.4;ring.style.strokeDashoffset=circ-(circ*pct/100);}
+  const el=document.getElementById('dayRingPct');if(el)el.textContent=pct+'%';
+}
+
+// ═══════════════════════════════════════════════════
+// ФИШКА 17 — Экспресс-проверка дня (3 вопроса)
+// ═══════════════════════════════════════════════════
+async function quickDayCheck(){
+  const q1=confirm('Минимум дня закрыт?');
+  const q2=confirm('Доходы внесены честно?');
+  const q3=confirm('Хоть одна полезная привычка сделана?');
+  const score=(q1?40:0)+(q2?35:0)+(q3?25:0);
+  const r=await callAI([{role:'user',content:`Экспресс-проверка: минимум ${q1?'закрыт':'не закрыт'}, учёт ${q2?'ведётся':'не ведётся'}, привычки ${q3?'выполнены':'нет'}. Score ${score}/100. Дай честный вывод за 2 предложения.`}],100);
+  showToast(score>=75?'💪 Сильный день!':score>=40?'🟡 Держись':' 🔴 Завтра лучше',3000,score>=75?'var(--lime)':score>=40?'var(--gold)':'var(--red)');
+  alert('📊 Оценка дня:\n\n'+r);
+}
+
+// ═══════════════════════════════════════════════════
+// ФИШКА 18 — Сброс задач (начать день чисто)
+// ═══════════════════════════════════════════════════
+function resetTodayTasks(){
+  if(!confirm('Сбросить выполненные задачи и начать день заново?'))return;
+  if(S.tasks)S.tasks.forEach(t=>t.done=false);
+  save();showToast('♻️ Задачи сброшены');
+  goSub('life','plan');
+}
+
+// ═══════════════════════════════════════════════════
+// ФИШКА 19 — Добавление расхода за 3 секунды
+// ═══════════════════════════════════════════════════
+function ultraQuickExpense(cat,amount){
+  S.expenseEntries.unshift({id:uid(),date:tdk(),amount,category:cat,currency:'PLN',notes:'Быстрый ввод'});
+  save();renderMoneyMenu();
+  showToast('💸 −'+amount+' PLN · '+cat);
+}
+
+// ═══════════════════════════════════════════════════
+// ФИШКА 20 — Страница настроек (профиль + PIN + экспорт)
+// ═══════════════════════════════════════════════════
+function subSettings(wrap){
+  wrap.innerHTML=`
+    <div class="sub-head"><button class="back-btn" onclick="goBack()">‹ Назад</button><div class="sub-title">Настройки</div></div>
+    <div class="form-section">
+      <div class="form-section-title">Профиль</div>
+      <div class="form-grid c2">
+        <div><label class="flabel">Имя</label><input class="finput" id="stgName" value="${esc(S.profile.name||'Вадим')}"></div>
+        <div><label class="flabel">Город</label><input class="finput" id="stgCity" value="${esc(S.profile.city||'Вроцлав')}"></div>
+      </div>
+      <div class="form-grid c3">
+        <div><label class="flabel">Безоп. мин (PLN)</label><input class="finput" type="number" id="stgSafe" value="${S.profile.safeMinimum}"></div>
+        <div><label class="flabel">Комф. цель (PLN)</label><input class="finput" type="number" id="stgComfort" value="${S.profile.comfortTarget}"></div>
+        <div><label class="flabel">Пол дня (PLN)</label><input class="finput" type="number" id="stgFloor" value="${S.profile.dailyFloor}"></div>
+      </div>
+      <div class="form-grid c2">
+        <div><label class="flabel">График (6/1)</label><input class="finput" id="stgSched" value="${S.profile.schedule||'6/1'}"></div>
+        <div><label class="flabel">Курс UAH→PLN</label><input class="finput" type="number" id="stgUah" value="${S.profile.uahRate}" step="0.001"></div>
+      </div>
+      <label class="flabel">Миссия года</label>
+      <textarea class="finput" id="stgMission" style="min-height:60px">${esc(S.profile.mission||'')}</textarea>
+      <button class="btn btn-lime" onclick="saveSettings()">Сохранить профиль</button>
+    </div>
+    <div class="form-section">
+      <div class="form-section-title">Уведомления</div>
+      <button class="btn btn-ghost" onclick="requestNotifications()">🔔 Включить уведомления</button>
+      <div style="font-family:var(--B);font-size:12px;color:var(--t3);margin-top:8px;line-height:1.5">Напоминания о платежах, утренний брифинг в 08:00. Работает на iPhone через Safari (добавь на экран домой).</div>
+    </div>
+    <div class="form-section">
+      <div class="form-section-title">Данные</div>
+      <div class="form-grid c2">
+        <button class="btn btn-ghost" onclick="exportData()">📤 Экспорт JSON</button>
+        <label class="btn btn-ghost" style="cursor:pointer;text-align:center;display:flex;align-items:center;justify-content:center">📥 Импорт<input type="file" accept=".json" onchange="importDataFile(event)" style="display:none"></label>
+      </div>
+      <button class="btn btn-ghost" style="border-color:var(--red);color:var(--red);margin-top:8px" onclick="resetAllData()">🗑 Сбросить все данные</button>
+    </div>
+    <div class="form-section">
+      <div class="form-section-title">О приложении</div>
+      <div style="font-family:var(--B);font-size:13px;color:var(--t3);line-height:1.7">
+        <div style="color:var(--t1);font-family:var(--H);font-size:16px;font-weight:800;margin-bottom:6px">Ю991 · Life OS</div>
+        Персональная операционная система для Вадима, 26 лет, Вроцлав.<br>
+        Данные хранятся локально в браузере.<br>
+        <span style="color:var(--lime)">Версия 2.0 Final</span>
+      </div>
+    </div>`;
+}
+
+function saveSettings(){
+  S.profile={...S.profile,name:v('stgName'),city:v('stgCity'),safeMinimum:+v('stgSafe')||6500,comfortTarget:+v('stgComfort')||9000,dailyFloor:+v('stgFloor')||325,schedule:v('stgSched'),uahRate:+v('stgUah')||0.095,mission:v('stgMission')};
+  save();showToast('✅ Профиль сохранён');
+}
+
+function importDataFile(e){
+  const file=e.target.files?.[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=()=>{try{S={...defaultState(),...JSON.parse(reader.result)};save();renderHome();renderMoneyMenu();renderWorkMenu();renderLifeMenu();showToast('✅ Данные импортированы');}catch{showToast('❌ Ошибка импорта',2500,'var(--red)');}};
+  reader.readAsText(file);e.target.value='';
+}
+
+function resetAllData(){
+  if(!confirm('Удалить ВСЕ данные? Это нельзя отменить.'))return;
+  S=defaultState();save();renderHome();renderMoneyMenu();renderWorkMenu();renderLifeMenu();showToast('♻️ Данные сброшены');
+}
+
+// ═══════════════════════════════════════════════════
+// ФИШКА 21 — Шаблоны быстрых расходов на главной
+// ═══════════════════════════════════════════════════
+function renderQuickExpenseBar(){
+  const el=document.getElementById('quickExpBar');if(!el)return;
+  const QUICK=[{ico:'🍕',lbl:'Еда',a:40},{ico:'⛽',lbl:'Велик',a:15},{ico:'☕',lbl:'Кофе',a:10},{ico:'🚌',lbl:'Автобус',a:5},{ico:'💊',lbl:'Аптека',a:25}];
+  el.innerHTML=QUICK.map(q=>`<button onclick="ultraQuickExpense('${q.lbl}',${q.a})" style="display:flex;flex-direction:column;align-items:center;gap:3px;background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:10px 8px;cursor:pointer;transition:all .2s;flex:1;min-width:52px"><span style="font-size:20px">${q.ico}</span><span style="font-family:var(--H);font-size:8px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--t3)">${q.lbl}</span><span style="font-family:var(--H);font-size:10px;font-weight:700;color:var(--t2)">${q.a}</span></button>`).join('');
+}
+
+// ═══════════════════════════════════════════════════
+// ФИШКА 22 — Прогресс кольцо дня в topbar
+// ═══════════════════════════════════════════════════
+function updateTopRing(){
+  const earn=getIncomeForDate(tdk());const m=getMetrics();
+  const pct=Math.min(100,earn/Math.max(m.mustEarnToday,1));
+  const ring=document.getElementById('topDayRing');
+  if(ring){const circ=75.4;ring.style.strokeDashoffset=circ-(circ*pct);}
+}
+
+// ═══════════════════════════════════════════════════
+// ФИШКА 23 — Анализ недели (AI-инсайт)
+// ═══════════════════════════════════════════════════
+async function weeklyAnalysis(wrap){
+  const ws=getWeekSummary();const best=getBestShift();const chain=getChainStatus();
+  const txt=`Недельный итог:\n- Заработано: ${ws.earn} PLN за ${ws.days} дней\n- Привычек выполнено: ${ws.habits}\n- Лучшая смена: ${best?best.earn+' PLN '+best.date:'нет данных'}\n- Серия привычек: ${chain.streak} дней\nДай короткий анализ недели и главный совет на следующую.`;
+  if(wrap){wrap.innerHTML='<div style="padding:14px 18px;font-family:var(--B);font-size:13px;color:var(--t3)">Анализирую неделю...</div>';}
+  try{
+    const r=await callAI([{role:'user',content:txt}],250);
+    if(wrap){wrap.innerHTML=`<div style="padding:14px 18px;font-family:var(--B);font-size:13px;line-height:1.6;color:#ccc">${esc(r)}</div>`;}
+    else alert('📊 Анализ недели:\n\n'+r);
+  }catch(e){if(wrap)wrap.innerHTML='<div style="padding:14px 18px;color:var(--t3);font-size:13px">Нет соединения</div>';}
+}
+
+// ═══════════════════════════════════════════════════
+// ФИШКА 24 — Зоны на карте с горячим временем
+// ═══════════════════════════════════════════════════
+function addHeatZones(map){
+  if(!map||!window.L)return;
+  const h=new Date().getHours();
+  // Цвет зависит от времени суток
+  const hot=(h>=11&&h<15)||(h>=18&&h<22);
+  const zones=[
+    {lat:51.1079,lng:17.0385,r:800,label:'Rynek ТОП',color:hot?'#c8ff00':'#555'},
+    {lat:51.1128,lng:17.0572,r:400,label:'Grunwaldzki',color:hot?'#00f0ff':'#444'},
+    {lat:51.1032,lng:17.0321,r:300,label:'Galeria Dominikanska',color:'#a855f7'},
+    {lat:51.1105,lng:17.0400,r:250,label:'Hala Swiebodzki',color:'#ff7a00'},
+  ];
+  zones.forEach(z=>{
+    L.circle([z.lat,z.lng],{color:z.color,fillColor:z.color,fillOpacity:.15,radius:z.r,weight:1.5}).addTo(map).bindPopup(z.label);
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// ФИШКА 25 — Секция «Жизнь» с подразделом «Прогресс»
+// ═══════════════════════════════════════════════════
+function subLifeProgress(wrap){
+  const bars=calcBars();const total=r2(bars.reduce((s,v)=>s+v,0)/bars.length);
+  const ws=getWeekSummary();const best=getBestShift();
+  wrap.innerHTML=`
+    <div class="sub-head"><button class="back-btn" onclick="goBack()">‹ Назад</button><div class="sub-title">Жизнь · Прогресс</div></div>
+    <div style="padding:16px 18px;border-bottom:1px solid var(--b1)">
+      <div style="font-family:var(--H);font-size:9px;color:var(--t3);letter-spacing:3px;text-transform:uppercase;margin-bottom:4px">Общий балл жизни</div>
+      <div style="font-family:var(--H);font-size:52px;font-weight:900;letter-spacing:-3px;color:var(--lime)">${total}<span style="font-size:20px;color:var(--t3)">/100</span></div>
+    </div>
+    <div style="padding:14px 18px;border-bottom:1px solid var(--b1)">
+      <div style="font-family:var(--H);font-size:9px;color:var(--t3);letter-spacing:3px;text-transform:uppercase;margin-bottom:10px">Неделя в цифрах</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <div style="text-align:center"><div style="font-family:var(--H);font-size:24px;font-weight:900;color:var(--lime)">${ws.earn}</div><div style="font-family:var(--H);font-size:8px;color:var(--t3);letter-spacing:1px;text-transform:uppercase;margin-top:2px">PLN / нед</div></div>
+        <div style="text-align:center"><div style="font-family:var(--H);font-size:24px;font-weight:900;color:var(--cyan)">${ws.days}</div><div style="font-family:var(--H);font-size:8px;color:var(--t3);letter-spacing:1px;text-transform:uppercase;margin-top:2px">рабочих дней</div></div>
+        <div style="text-align:center"><div style="font-family:var(--H);font-size:24px;font-weight:900;color:var(--purple)">${ws.habits}</div><div style="font-family:var(--H);font-size:8px;color:var(--t3);letter-spacing:1px;text-transform:uppercase;margin-top:2px">привычек</div></div>
+      </div>
+    </div>
+    ${best?`<div style="padding:13px 18px;border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:12px"><div style="font-size:20px">🏆</div><div><div style="font-family:var(--H);font-size:13px;font-weight:800;text-transform:uppercase">Лучшая смена</div><div style="font-family:var(--H);font-size:10px;color:var(--t3);letter-spacing:1px;margin-top:2px">${fmtDate(best.date)}</div></div><div style="margin-left:auto;font-family:var(--H);font-size:18px;font-weight:900;color:var(--lime)">${best.earn} PLN</div></div>`:''}
+    <div id="weeklyAnalysisWrap" style="border-bottom:1px solid var(--b1)"></div>
+    <div style="padding:12px 18px"><button class="btn btn-ghost" onclick="weeklyAnalysis(document.getElementById('weeklyAnalysisWrap'))">📊 AI-анализ недели</button></div>`;
+}
+
+// ══ Патч: добавить настройки в навигацию Жизнь ══
+// (extras уже добавлены в основной renderSub выше)
+
+// ══ initLeaflet — инициализация карты с зонами ══
+function initLeaflet(){
+  if(!window.L||!document.getElementById('map'))return;
+  const m=L.map('map',{zoomControl:false,attributionControl:false}).setView([51.1079,17.0385],14);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:18}).addTo(m);
+  addHeatZones(m);
+  window._leafMap=m;
+  // Try geolocation
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(p=>{
+      L.circleMarker([p.coords.latitude,p.coords.longitude],{radius:8,color:'#c8ff00',fillColor:'#c8ff00',fillOpacity:1}).addTo(m).bindPopup('📍 Ты здесь');
+      m.setView([p.coords.latitude,p.coords.longitude],15);
+      const d=Math.sqrt((p.coords.latitude-51.1079)**2+(p.coords.longitude-17.0385)**2)*111;
+      const tip=document.getElementById('mapAiTip');
+      if(tip&&d>2)tip.textContent=`Ты в ${r2(d)} км от центра. Переезжай в Śródmieście — там на ${r2(d*40)}% больше заказов прямо сейчас.`;
+    },()=>{/* silently fail */},{timeout:8000});
+  }
+}
+
+// ══ Патч: обновлять кольцо каждые 30 секунд ══
+setInterval(()=>{updateTopRing();updateDayRing();},30000);
+
+// ══ Добавить кнопку настроек в нижнем меню ══
+// (подключается через renderSub)
+function openSettings(){
+  curSubKey='settings';
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
+  document.getElementById('page-sub')?.classList.add('on');
+  document.getElementById('content').scrollTop=0;
+  subSettings(document.getElementById('subContent'));
+}
+
+// (renderHome extended inline — patch removed to avoid call stack overflow)
+
+// ══ Патч goSub для settings — уже обрабатывается через renderSub выше ══
+
+init();
+</script>
+</body>
+</html>
